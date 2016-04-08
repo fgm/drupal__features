@@ -470,7 +470,7 @@ function drush_features_components() {
  */
 function drush_features_diff() {
   if (!$args = func_get_args()) {
-    drush_features_list_packages();
+    drush_print_table(drush_features_list_packages());
     return;
   }
 
@@ -669,7 +669,7 @@ function drush_features_import() {
     }
   }
   else {
-    drush_features_list();
+    drush_print_table(drush_features_list_packages());
     return;
   }
 }
