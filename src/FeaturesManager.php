@@ -411,12 +411,8 @@ class FeaturesManager implements FeaturesManagerInterface {
       // @see _system_rebuild_module_data().
       $listing = new ExtensionDiscovery(\Drupal::root());
 
-      $profile_directories = [];
-      // Register the install profile.
+      $profile_directories = $listing->setProfileDirectoriesFromSettings()->getProfileDirectories();
       $installed_profile = $this->drupalGetProfile();
-      if ($installed_profile) {
-        $profile_directories[] = drupal_get_path('profile', $installed_profile);
-      }
       if (isset($bundle) && $bundle->isProfile()) {
         $profile_directory = 'profiles/' . $bundle->getProfileName();
         if (($bundle->getProfileName() != $installed_profile) && is_dir($profile_directory)) {
