@@ -1227,13 +1227,15 @@ class FeaturesManager implements FeaturesManagerInterface {
   }
 
   protected function addConfigList($full_name, &$list) {
-    if (!in_array($full_name, $list)) {
-      array_unshift($list, $full_name);
-      $value = $this->extensionStorages->read($full_name);
-      if (isset($value['dependencies']['config'])) {
-        foreach ($value['dependencies']['config'] as $config_name) {
-          $this->addConfigList($config_name, $list);
-        }
+    $index = array_search($full_name, $list);
+    if ($index !== FALSE) {
+      unset($list[$index]);
+    }
+    array_unshift($list, $full_name);
+    $value = $this->extensionStorages->read($full_name);
+    if (isset($value['dependencies']['config'])) {
+      foreach ($value['dependencies']['config'] as $config_name) {
+        $this->addConfigList($config_name, $list);
       }
     }
   }
