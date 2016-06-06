@@ -258,27 +258,29 @@ function drush_features_list_packages($package_name = '') {
 /**
  * Drush command callback for features-import-all.
  *
- * @return bool
  */
 function drush_features_import_all() {
   _drush_features_options();
   /** @var \Drupal\features\FeaturesManagerInterface $manager */
   $manager = \Drupal::service('features.manager');
   $packages = $manager->getPackages();
-
   $packages = $manager->filterPackages($packages);
-  $result = array();
+  $overridden = array();
 
   foreach ($packages as $package) {
     $overrides = $manager->detectOverrides($package);
-
-    if ($package->getStatus() == FeaturesManagerInterface::STATUS_INSTALLED) {
-      drush_print(dt('Reverting @module...', array('@module' => $package->getName())));
-      drush_features_import($package->getMachineName());
+    $missing = $manager->detectMissing($package);
+    if ((!empty($missing) || !empty($overrides)) && ($package->getStatus() == FeaturesManagerInterface::STATUS_INSTALLED)) {
+      $overridden[] = $package->getMachineName();
     }
   }
 
-  return TRUE;
+  if (!empty($overridden)) {
+    call_user_func_array('drush_features_import', $overridden);
+  }
+  else {
+    drush_log(dt('Current state already matches active config, aborting.'), 'ok');
+  }
 }
 
 /**
