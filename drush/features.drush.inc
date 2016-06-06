@@ -117,7 +117,7 @@ function features_drush_command() {
       'force' => "Force import even if config is not overridden.",
     ),
     'examples' => array(
-      'drush feature-import foo.node foo.taxonomy bar' => 'Import node and taxonomy config of feature "foo". Import all config of feature "bar".',
+      'drush features-import foo:node.type.page foo:taxonomy.vocabulary.tags bar' => 'Import node and taxonomy config of feature "foo". Import all config of feature "bar".',
     ),
     'aliases' => array('fim', 'fr'),
   );
