@@ -633,9 +633,7 @@ class FeaturesManager implements FeaturesManagerInterface {
           if (isset($config_collection[$dependent_item_name]) && (!empty($package) || empty($config_collection[$dependent_item_name]->getPackage()))) {
             try {
               $package_name = !empty($package) ? $package : $config_collection[$item_name]->getPackage();
-              // If a Package is specified, force assign it to the given
-              // package.
-              $this->assignConfigPackage($package_name, [$dependent_item_name], !empty($package));
+              $this->assignConfigPackage($package_name, [$dependent_item_name]);
             }
             catch (\Exception $exception) {
               \Drupal::logger('features')->error($exception->getMessage());
