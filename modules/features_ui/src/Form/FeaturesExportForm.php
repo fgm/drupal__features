@@ -410,8 +410,8 @@ class FeaturesExportForm extends FormBase {
 
     $config_types = $this->featuresManager->listConfigTypes();
     // Add dependencies.
-    $config_types['dependencies'] = $this->t('Dependencies')->render();
-    $config_types['missing'] = $this->t('Missing')->render();
+    $config_types['dependencies'] = $this->t('Dependencies');
+    $config_types['missing'] = $this->t('Missing');
     uasort($config_types, 'strnatcasecmp');
 
     $rows = array();

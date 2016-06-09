@@ -999,12 +999,12 @@ class FeaturesManager implements FeaturesManagerInterface {
       }
     }
     $entity_types = array_map(function (EntityTypeInterface $definition) {
-      return $definition->getLabel()->render();
+      return $definition->getLabel();
     }, $definitions);
     // Sort the entity types by label, then add the simple config to the top.
     uasort($entity_types, 'strnatcasecmp');
     return $bundles_only ? $entity_types : [
-      FeaturesManagerInterface::SYSTEM_SIMPLE_CONFIG => $this->t('Simple configuration')->render(),
+      FeaturesManagerInterface::SYSTEM_SIMPLE_CONFIG => $this->t('Simple configuration'),
     ] + $entity_types;
   }
 
