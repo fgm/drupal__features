@@ -1,11 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains
- * \Drupal\features\Plugin\FeaturesGeneration\FeaturesGenerationArchive.
- */
-
 namespace Drupal\features\Plugin\FeaturesGeneration;
 
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;

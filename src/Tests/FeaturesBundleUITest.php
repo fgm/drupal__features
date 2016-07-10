@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\features\Tests\FeaturesBundleUITest.
- */
-
 namespace Drupal\features\Tests;
 
 use Drupal\Core\Entity\EntityStorageInterface;

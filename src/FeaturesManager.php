@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\features\FeaturesManager.
- */
-
 namespace Drupal\features;
 use Drupal;
 use Drupal\Component\Serialization\Yaml;
