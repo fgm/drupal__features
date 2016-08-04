@@ -10,7 +10,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 /**
  * Tests configuring bundles.
  *
- * @group features
+ * @group features_ui
  */
 class FeaturesBundleUITest extends WebTestBase {
   use StringTranslationTrait;

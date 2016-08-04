@@ -10,7 +10,7 @@ use Drupal\Core\StringTranslation\StringTranslationTrait;
 /**
  * Tests the creation of a feature.
  *
- * @group features
+ * @group features_ui
  */
 class FeaturesCreateUITest extends WebTestBase {
   use StringTranslationTrait;
