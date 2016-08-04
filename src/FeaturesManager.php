@@ -946,7 +946,9 @@ class FeaturesManager implements FeaturesManagerInterface {
         // avoid extraneous additions, reset permissions.
         if ($config->getType() == 'user_role') {
           $data = $config->getData();
-          $data['permissions'] = [];
+          // Unset and not empty permissions data to prevent loss of configured
+          // role permissions in the event of a feature revert.
+          unset($data['permissions']);
           $config->setData($data);
         }
         $package->appendFile([
