@@ -1067,13 +1067,40 @@ class FeaturesManager implements FeaturesManagerInterface {
   }
 
   /**
+   * Creates a high performant version of the ConfigDependencyManager.
+   *
+   * @return \Drupal\features\FeaturesConfigDependencyManager
+   *   A high performant version of the ConfigDependencyManager.
+   *
+   * @see \Drupal\Core\Config\Entity\ConfigDependencyManager
+   */
+  protected function getFeaturesConfigDependencyManager() {
+    $dependency_manager = new FeaturesConfigDependencyManager();
+    // Read all configuration using the factory. This ensures that multiple
+    // deletes during the same request benefit from the static cache. Using the
+    // factory also ensures configuration entity dependency discovery has no
+    // dependencies on the config entity classes. Assume data with UUID is a
+    // config entity. Only configuration entities can be depended on so we can
+    // ignore everything else.
+    $data = array_map(function(Drupal\Core\Config\ImmutableConfig $config) {
+      $data = $config->get();
+      if (isset($data['uuid'])) {
+        return $data;
+      }
+      return FALSE;
+    }, $this->configFactory->loadMultiple($this->configStorage->listAll()));
+    $dependency_manager->setData(array_filter($data));
+    return $dependency_manager;
+  }
+
+  /**
    * Loads configuration from storage into a property.
    */
   protected function initConfigCollection($reset = FALSE) {
     if ($reset || empty($this->configCollection)) {
       $config_collection = [];
       $config_types = $this->listConfigTypes();
-      $dependency_manager = $this->configManager->getConfigDependencyManager();
+      $dependency_manager = $this->getFeaturesConfigDependencyManager();
       // List configuration provided by installed features.
       $existing_config = $this->listExistingConfig(NULL);
       foreach (array_keys($config_types) as $config_type) {
