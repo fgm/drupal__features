@@ -1131,6 +1131,12 @@ class FeaturesManager implements FeaturesManagerInterface {
       }
     }
 
+    // Use the same path of a package to override it.
+    if ($extension = $package->getExtension()) {
+      $extension_path = $extension->getPath();
+      $path = dirname($extension_path);
+    }
+
     return array($full_name, $path);
   }
 
