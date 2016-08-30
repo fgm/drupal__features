@@ -1,6 +1,6 @@
 <?php
 
-namespace Drupal\features\Tests;
+namespace Drupal\features_ui\Tests;
 
 use Drupal\Component\Serialization\Yaml;
 use Drupal\Core\Archiver\ArchiveTar;
