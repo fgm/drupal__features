@@ -553,7 +553,7 @@ class FeaturesEditForm extends FormBase {
     // Make a map of any config specifically excluded and/or required.
     foreach (array('excluded', 'required') as $constraint) {
       $this->{$constraint} = array();
-      $info = isset($this->package->getFeaturesInfo()[$constraint]) ? $this->package->getFeaturesInfo()[$constraint] : array();
+      $info = !empty($this->package->{'get' . $constraint}()) ? $this->package->{'get' . $constraint}() : array();
       if (($constraint == 'required') && (empty($info) || !is_array($info))) {
         // If required is True or empty array, add all config as required
         $info = $this->package->getConfigOrig();
@@ -648,7 +648,7 @@ class FeaturesEditForm extends FormBase {
               $this->required[$component][$key] = $key;
             }
           }
-          elseif (isset($new_components[$key])) {
+          elseif (isset($new_components[$key]) || isset($config_new[$component][$key])) {
             // Option is in the New exported array.
             if (isset($exported_components[$key])) {
               // Option was already previously exported so it's part of the
@@ -682,7 +682,7 @@ class FeaturesEditForm extends FormBase {
               $section = 'detected';
               $default_value = NULL;
               // Check for item explicitly excluded.
-              if (isset($this->excluded[$component][$key]) && !$form_state->hasValue(array($component, 'detected', $key))) {
+              if (isset($this->excluded[$component][$key]) && !$form_state->isSubmitted()) {
                 $default_value = FALSE;
               }
               else {
@@ -712,12 +712,10 @@ class FeaturesEditForm extends FormBase {
             if (($section == 'detected') && ($default_value === FALSE)) {
               // If this was previously required, we don't need to set it as
               // excluded because it wasn't automatically assigned.
-              if (isset($this->required[$component][$key])) {
-                unset($this->required[$component][$key]);
-              }
-              else {
+              if (!isset($this->required[$component][$key]) || ($this->package->getRequired() === TRUE)) {
                 $this->excluded[$component][$key] = $key;
               }
+              unset($this->required[$component][$key]);
               // Remove excluded item from export.
               if ($component == 'dependencies') {
                 $export['package']->removeDependency($key);

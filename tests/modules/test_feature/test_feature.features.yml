@@ -1,3 +1,4 @@
 bundle: test
-required:
-  - system.cron
+excluded:
+  - system.theme
+required: true
