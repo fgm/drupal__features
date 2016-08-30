@@ -486,7 +486,9 @@ class FeaturesManager implements FeaturesManagerInterface {
     $info = $this->getExtensionInfo($extension);
     $features_info = $this->getFeaturesInfo($extension);
     $bundle = $this->getAssigner()->findBundle($info, $features_info);
-    $short_name = $bundle->getShortName($extension->getName());
+    // Use the full extension name as the short_name.  Important to allow
+    // multiple modules with different namespaces such as oa_media, test_media.
+    $short_name = $extension->getName();
     return $this->initPackage($short_name, $info['name'], !empty($info['description']) ? $info['description'] : '', $info['type'], $bundle, $extension);
   }
 

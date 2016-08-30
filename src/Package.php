@@ -140,13 +140,26 @@ class Package {
   }
 
   /**
+   * Return TRUE if the machine_name already has the bundle prefix.
+   *
+   * @param string $machine_name
+   * @param string $bundle_name
+   * @return bool
+   */
+  protected function inBundle($machine_name, $bundle_name) {
+    return strpos($machine_name, $bundle_name . '_') === 0;
+  }
+
+  /**
    * @return string
    */
   public function getFullName() {
-    if (!empty($this->bundle)) {
+    if (empty($this->bundle) || $this->inBundle($this->machineName, $this->bundle)) {
+      return $this->machineName;
+    }
+    else {
       return $this->bundle . '_' . $this->machineName;
     }
-    return $this->machineName;
   }
 
   /**
