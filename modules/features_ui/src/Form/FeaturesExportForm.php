@@ -341,7 +341,7 @@ class FeaturesExportForm extends FormBase {
       elseif (!in_array($item_name, $package->getConfig())) {
         $item = $config_collection[$item_name];
         $conflicts[] = $item_name;
-        $package_name = !empty($item->getPackage()) ? $item->getPackage() : t('PACKAGE NOT ASSIGNED');
+        $package_name = !empty($item->getPackage()) ? $item->getPackage() : $this->t('PACKAGE NOT ASSIGNED');
         $package_config[$item->getType()][] = array(
           'name' => Html::escape($package_name),
           'label' => Html::escape($item->getLabel()),

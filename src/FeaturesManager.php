@@ -1259,13 +1259,13 @@ class FeaturesManager implements FeaturesManagerInterface {
   public function statusLabel($status) {
     switch ($status) {
       case FeaturesManagerInterface::STATUS_NO_EXPORT:
-        return t('Not exported');
+        return $this->t('Not exported');
 
       case FeaturesManagerInterface::STATUS_UNINSTALLED:
-        return t('Uninstalled');
+        return $this->t('Uninstalled');
 
       case FeaturesManagerInterface::STATUS_INSTALLED:
-        return t('Installed');
+        return $this->t('Installed');
     }
   }
 
@@ -1275,10 +1275,10 @@ class FeaturesManager implements FeaturesManagerInterface {
   public function stateLabel($state) {
     switch ($state) {
       case FeaturesManagerInterface::STATE_DEFAULT:
-        return t('Default');
+        return $this->t('Default');
 
       case FeaturesManagerInterface::STATE_OVERRIDDEN:
-        return t('Changed');
+        return $this->t('Changed');
     }
   }
 

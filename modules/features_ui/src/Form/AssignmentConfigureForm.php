@@ -195,7 +195,7 @@ class AssignmentConfigureForm extends FormBase {
 
     $form['bundle'] = array(
       '#type' => 'fieldset',
-      '#title' => t('Bundle'),
+      '#title' => $this->t('Bundle'),
       '#tree' => TRUE,
       '#weight' => -9,
     );
@@ -221,10 +221,10 @@ class AssignmentConfigureForm extends FormBase {
       ];
     }
     $form['bundle']['bundle_select'] = array(
-      '#title' => t('Bundle'),
+      '#title' => $this->t('Bundle'),
       '#title_display' => 'invisible',
       '#type' => 'select',
-      '#options' => [self::NEW_BUNDLE_SELECT_VALUE => t('--New--')] + $this->assigner->getBundleOptions(),
+      '#options' => [self::NEW_BUNDLE_SELECT_VALUE => $this->t('--New--')] + $this->assigner->getBundleOptions(),
       '#default_value' => $default_values['bundle_select'],
       '#ajax' => array(
         'callback' => '::updateForm',
@@ -238,7 +238,7 @@ class AssignmentConfigureForm extends FormBase {
       $form['bundle']['remove'] = array(
         '#type' => 'button',
         '#name' => 'removebundle',
-        '#value' => t('Remove bundle'),
+        '#value' => $this->t('Remove bundle'),
       );
     }
 
@@ -282,7 +282,7 @@ class AssignmentConfigureForm extends FormBase {
 
     $form['bundle']['is_profile'] = array(
       '#type' => 'checkbox',
-      '#title' => t('Include install profile'),
+      '#title' => $this->t('Include install profile'),
       '#default_value' => $default_values['is_profile'],
       '#description' => $this->t('Select this option to have your features packaged into an install profile.'),
       '#attributes' => array(
