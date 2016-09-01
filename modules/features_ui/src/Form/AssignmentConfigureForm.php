@@ -2,7 +2,7 @@
 
 namespace Drupal\features_ui\Form;
 
-use Drupal\Component\Utility\SafeMarkup;
+use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\Unicode;
 use Drupal\features\FeaturesManagerInterface;
 use Drupal\features\FeaturesAssignerInterface;
@@ -325,7 +325,7 @@ class AssignmentConfigureForm extends FormBase {
       $enabled = isset($enabled_methods[$method_id]);
       $method = $assignment_info[$method_id];
 
-      $method_name = SafeMarkup::checkPlain($method['name']);
+      $method_name = Html::escape($method['name']);
 
       $form['weight'][$method_id] = array(
         '#type' => 'weight',

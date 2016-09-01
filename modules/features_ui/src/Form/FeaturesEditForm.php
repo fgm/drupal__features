@@ -2,7 +2,7 @@
 
 namespace Drupal\features_ui\Form;
 
-use Drupal\Component\Utility\SafeMarkup;
+use Drupal\Component\Utility\Html;
 use Drupal\Component\Utility\Xss;
 use Drupal\features\FeaturesAssignerInterface;
 use Drupal\features\FeaturesGeneratorInterface;
@@ -10,6 +10,7 @@ use Drupal\features\FeaturesManagerInterface;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+Use Drupal\Component\Render\FormattableMarkup;
 
 /**
  * Defines the features settings form.
@@ -269,7 +270,7 @@ class FeaturesEditForm extends FormBase {
         '#name' => $method_id,
         '#value' => $this->t('@name', array('@name' => $method['name'])),
         '#attributes' => array(
-          'title' => SafeMarkup::checkPlain($method['description']),
+          'title' => Html::escape($method['description']),
         ),
       );
     }
@@ -381,7 +382,7 @@ class FeaturesEditForm extends FormBase {
     foreach ($export['components'] as $component => $component_info) {
 
       $component_items_count = count($component_info['_features_options']['sources']);
-      $label = SafeMarkup::format('@component (<span class="component-count">@count</span>)',
+      $label = new FormattableMarkup('@component (<span class="component-count">@count</span>)',
         array(
           '@component' => $config_types[$component],
           '@count' => $component_items_count,
@@ -393,7 +394,7 @@ class FeaturesEditForm extends FormBase {
         $count += count($component_info['_features_options'][$section]);
       }
       $extra_class = ($count == 0) ? 'features-export-empty' : '';
-      $component_name = str_replace('_', '-', SafeMarkup::checkPlain($component));
+      $component_name = str_replace('_', '-', Html::escape($component));
 
       if ($count + $component_items_count > 0) {
         $element[$component] = array(
@@ -779,9 +780,9 @@ class FeaturesEditForm extends FormBase {
    *   The human label for the item.
    */
   protected function configLabel($type, $key, $label) {
-    $value = SafeMarkup::checkPlain($label);
+    $value = Html::escape($label);
     if ($key != $label) {
-      $value .= '  <span class="config-name">(' . SafeMarkup::checkPlain($key) . ')</span>';
+      $value .= '  <span class="config-name">(' . Html::escape($key) . ')</span>';
     }
     if (isset($this->conflicts[$type][$key])) {
       // Show what package the conflict is stored in.
@@ -793,7 +794,7 @@ class FeaturesEditForm extends FormBase {
       if (isset($packages[$package_name])) {
         $package_name = $packages[$package_name]->getMachineName();
       }
-      $value .= '  <span class="config-name">[' . $this->t('in') . ' ' . SafeMarkup::checkPlain($package_name) . ']</span>';
+      $value .= '  <span class="config-name">[' . $this->t('in') . ' ' . Html::escape($package_name) . ']</span>';
     }
     return Xss::filterAdmin($value);
   }
