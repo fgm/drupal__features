@@ -91,6 +91,13 @@ class FeaturesEditForm extends FormBase {
   protected $allowConflicts;
 
   /**
+   * Config missing from active site.
+   *
+   * @var array
+   */
+  protected $missing;
+
+  /**
    * Constructs a FeaturesEditForm object.
    *
    * @param \Drupal\features\FeaturesManagerInterface $features_manager
@@ -103,6 +110,7 @@ class FeaturesEditForm extends FormBase {
     $this->excluded = [];
     $this->required = [];
     $this->conflicts = [];
+    $this->missing = [];
   }
 
   /**
@@ -278,6 +286,25 @@ class FeaturesEditForm extends FormBase {
     // Build the Component Listing panel on the right.
     $form['export'] = $this->buildComponentList($form_state);
 
+    if (!empty($this->missing)) {
+      if ($this->allowConflicts) {
+        $form['actions']['#prefix'] = '<strong>' .
+          $this->t('WARNING: Package contains configuration missing from site.') . '<br>' .
+          $this->t('This configuration will be removed if you export it.') .
+          '</strong>';
+      }
+      else {
+        foreach ($generation_info as $method_id => $method) {
+          unset($form['actions'][$method_id]);
+        }
+        $form['actions']['#prefix'] = '<strong>' .
+          $this->t('Package contains configuration missing from site.') . '<br>' .
+          $this->t('Import the feature to create the missing config before you can export it.') . '<br>' .
+          $this->t('Or, enable the Allow Conflicts option above.') .
+          '</strong>';
+      }
+    }
+
     $form['#attached'] = array(
       'library' => array(
         'features_ui/drupal.features_ui.admin',
@@ -443,6 +470,16 @@ class FeaturesEditForm extends FormBase {
         );
       }
     }
+
+    $element['features_missing'] = array(
+      '#theme' => 'item_list',
+      '#items' => $export['missing'],
+      '#title' => $this->t('Configuration missing from active site:'),
+      '#suffix' => '<div class="description">' .
+        $this->t('Import the feature to create the missing config listed above.') .
+        '</div>',
+    );
+
     $element['features_legend'] = array(
       '#type' => 'fieldset',
       '#title' => $this->t('Legend'),
@@ -532,6 +569,7 @@ class FeaturesEditForm extends FormBase {
     }
 
     // Make a map of the config data already exported to the Feature.
+    $this->missing = array();
     $exported_features_info = array();
     foreach ($this->package->getConfigOrig() as $item_name) {
       // Make sure the extension provided item exists in the active
@@ -542,6 +580,9 @@ class FeaturesEditForm extends FormBase {
           // if ($this->allowConflicts || !isset($this->conflicts[$item['type']][$item['name_short']])) {
         $exported_features_info[$item->getType()][$item->getShortName()] = $item->getLabel();
         // }
+      }
+      else {
+        $this->missing[] = $item_name;
       }
     }
     $exported_features_info['dependencies'] = $this->package->getDependencyInfo();
@@ -765,6 +806,7 @@ class FeaturesEditForm extends FormBase {
     $export['features_exclude'] = $this->excluded;
     $export['features_require'] = $this->required;
     $export['conflicts'] = $this->conflicts;
+    $export['missing'] = $this->missing;
 
     return $export;
   }
