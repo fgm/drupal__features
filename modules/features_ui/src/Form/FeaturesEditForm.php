@@ -138,19 +138,22 @@ class FeaturesEditForm extends FormBase {
     $session = $this->getRequest()->getSession();
     $trigger = $form_state->getTriggeringElement();
     if ($trigger['#name'] == 'package') {
+      // Save current bundle name for later ajax callback.
       $this->oldBundle = $this->bundle;
-      $bundle_name = $form_state->getValue('package');
-      $bundle = $this->assigner->getBundle($bundle_name);
     }
     elseif ($trigger['#name'] == 'conflicts') {
       if (isset($session)) {
         $session->set('features_allow_conflicts', $form_state->getValue('conflicts'));
       }
-      $bundle = $this->assigner->loadBundle();
+    }
+    if (!$form_state->isValueEmpty('package')) {
+      $bundle_name = $form_state->getValue('package');
+      $bundle = $this->assigner->getBundle($bundle_name);
     }
     else {
       $bundle = $this->assigner->loadBundle();
     }
+    // Only store bundle name, not full object.
     $this->bundle = $bundle->getMachineName();
 
     $this->allowConflicts = FALSE;
