@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\features_ui\Form\AssignmentFormBase.
- */
-
 namespace Drupal\features_ui\Form;
 
 use Drupal\features\FeaturesManagerInterface;

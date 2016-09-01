@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\features\FeaturesManagerInterface.
- */
-
 namespace Drupal\features;
 
 use Drupal\Core\Extension\Extension;

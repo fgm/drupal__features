@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\features_ui\Form\FeaturesExportForm.
- */
-
 namespace Drupal\features_ui\Form;
 
 use Drupal\Component\Utility\SafeMarkup;

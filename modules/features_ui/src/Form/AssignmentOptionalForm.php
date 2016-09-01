@@ -1,10 +1,5 @@
 <?php
 
-/**
- * @file
- * Contains \Drupal\features_ui\Form\AssignmentOptionalForm.
- */
-
 namespace Drupal\features_ui\Form;
 
 use Drupal\Core\Form\FormStateInterface;
