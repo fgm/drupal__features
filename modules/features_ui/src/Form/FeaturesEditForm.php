@@ -187,6 +187,17 @@ class FeaturesEditForm extends FormBase {
       $this->package = $packages[$featurename];
     }
 
+    if (!empty($packages[$featurename]) && $this->package->getBundle() !== $this->bundle && $form_state->isValueEmpty('package')) {
+      // Make sure the current bundle matches what is stored in the package.
+      // But only do this if the Package value hasn't been manually changed.
+      $bundle = $this->assigner->getBundle($this->package->getBundle());
+      $this->bundle = $bundle->getMachineName();
+      $this->assigner->reset();
+      $this->assigner->assignConfigPackages(TRUE);
+      $packages = $this->featuresManager->getPackages();
+      $this->package = $packages[$featurename];
+    }
+
     $form = array(
       '#show_operations' => FALSE,
       '#prefix' => '<div id="features-edit-wrapper">',
