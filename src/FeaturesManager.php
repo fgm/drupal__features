@@ -816,7 +816,6 @@ class FeaturesManager implements FeaturesManagerInterface {
       'status' => FeaturesManagerInterface::STATUS_DEFAULT,
       'version' => '',
       'state' => FeaturesManagerInterface::STATE_DEFAULT,
-      'directory' => $machine_name,
       'files' => [],
       'bundle' => $bundle->isDefault() ? '' : $bundle->getMachineName(),
       'extension' => NULL,
@@ -932,8 +931,6 @@ class FeaturesManager implements FeaturesManagerInterface {
    */
   protected function addPackageFiles(Package $package) {
     $config_collection = $this->getConfigCollection();
-    // Ensure the directory reflects the current full machine name.
-    $package->setDirectory($package->getMachineName());
     // Only add files if there is at least one piece of configuration
     // present.
     if ($package->getConfig()) {

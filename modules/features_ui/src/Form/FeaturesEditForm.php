@@ -268,6 +268,16 @@ class FeaturesEditForm extends FormBase {
       '#size' => 30,
     );
 
+    list($full_name, $path) = $this->featuresManager->getExportInfo($this->package, $bundle);
+    $form['info']['directory'] = array(
+      '#title' => $this->t('Path'),
+      '#description' => $this->t('Path to export package using Write action, relative to root directory.'),
+      '#type' => 'textfield',
+      '#required' => FALSE,
+      '#default_value' => $path,
+      '#size' => 30,
+    );
+
     $require_all = $this->package->getRequiredAll();
     $form['info']['require_all'] = array(
       '#type' => 'checkbox',
@@ -885,6 +895,7 @@ class FeaturesEditForm extends FormBase {
     $this->package->setMachineName($form_state->getValue('machine_name'));
     $this->package->setDescription($form_state->getValue('description'));
     $this->package->setVersion($form_state->getValue('version'));
+    $this->package->setDirectory($form_state->getValue('directory'));
     $this->package->setBundle($bundle->getMachineName());
     // Save it first just to create it in case it's a new package.
     $this->featuresManager->setPackage($this->package);
