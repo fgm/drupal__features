@@ -320,13 +320,15 @@ class FeaturesExportForm extends FormBase {
     // Bundle package configuration by type.
     $package_config = array();
     foreach ($package->getConfig() as $item_name) {
-      $item = $config_collection[$item_name];
-      $package_config[$item->getType()][] = array(
-        'name' => Html::escape($item_name),
-        'label' => Html::escape($item->getLabel()),
-        'class' => in_array($item_name, $overrides) ? 'features-override' :
-          (in_array($item_name, $new_config) ? 'features-detected' : ''),
-      );
+      if (isset($config_collection[$item_name])) {
+        $item = $config_collection[$item_name];
+        $package_config[$item->getType()][] = array(
+          'name' => Html::escape($item_name),
+          'label' => Html::escape($item->getLabel()),
+          'class' => in_array($item_name, $overrides) ? 'features-override' :
+            (in_array($item_name, $new_config) ? 'features-detected' : ''),
+        );
+      }
     }
     // Conflict config from other modules.
     foreach ($package->getConfigOrig() as $item_name) {
