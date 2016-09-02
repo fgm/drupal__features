@@ -7,10 +7,12 @@ use Drupal\Component\Utility\Xss;
 use Drupal\features\FeaturesAssignerInterface;
 use Drupal\features\FeaturesGeneratorInterface;
 use Drupal\features\FeaturesManagerInterface;
+use Drupal\features\ConfigurationItem;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 Use Drupal\Component\Render\FormattableMarkup;
+use Drupal\config_update\ConfigRevertInterface;
 
 /**
  * Defines the features settings form.
@@ -98,15 +100,23 @@ class FeaturesEditForm extends FormBase {
   protected $missing;
 
   /**
+   * The config reverter.
+   *
+   * @var \Drupal\config_update\ConfigRevertInterface
+   */
+  protected $configRevert;
+
+  /**
    * Constructs a FeaturesEditForm object.
    *
    * @param \Drupal\features\FeaturesManagerInterface $features_manager
    *   The features manager.
    */
-  public function __construct(FeaturesManagerInterface $features_manager, FeaturesAssignerInterface $assigner, FeaturesGeneratorInterface $generator) {
+  public function __construct(FeaturesManagerInterface $features_manager, FeaturesAssignerInterface $assigner, FeaturesGeneratorInterface $generator, ConfigRevertInterface $config_revert) {
     $this->featuresManager = $features_manager;
     $this->assigner = $assigner;
     $this->generator = $generator;
+    $this->configRevert = $config_revert;
     $this->excluded = [];
     $this->required = [];
     $this->conflicts = [];
@@ -120,7 +130,8 @@ class FeaturesEditForm extends FormBase {
     return new static(
       $container->get('features.manager'),
       $container->get('features_assigner'),
-      $container->get('features_generator')
+      $container->get('features_generator'),
+      $container->get('features.config_update')
     );
   }
 
@@ -306,6 +317,14 @@ class FeaturesEditForm extends FormBase {
           $this->t('Or, enable the Allow Conflicts option above.') .
           '</strong>';
       }
+      $form['actions']['import_missing'] = array(
+        '#type' => 'submit',
+        '#name' => 'import_missing',
+        '#value' => $this->t('Import Missing'),
+        '#attributes' => array(
+          'title' => $this->t('Import only the missing configuration items.'),
+        ),
+      );
     }
 
     $form['#attached'] = array(
@@ -881,7 +900,10 @@ class FeaturesEditForm extends FormBase {
 
     // Set default redirect, but allow generators to change it later.
     $form_state->setRedirect('features.edit', array('featurename' => $this->package->getMachineName()));
-    if (!empty($method_id)) {
+    if ($method_id == 'import_missing') {
+      $this->importMissing();
+    }
+    elseif (!empty($method_id)) {
       $packages = array($this->package->getMachineName());
       $this->generator->generatePackages($method_id, $bundle, $packages);
       $this->generator->applyExportFormSubmit($method_id, $form, $form_state);
@@ -905,6 +927,27 @@ class FeaturesEditForm extends FormBase {
       }
     }
     return $config;
+  }
+
+  /**
+   * Imports the configuration missing from the active store
+   */
+  protected function importMissing() {
+    $config = $this->featuresManager->getConfigCollection();
+    $missing = $this->featuresManager->reorderMissing($this->missing);
+    foreach ($missing as $config_name) {
+      if (!isset($config[$config_name])) {
+        $item = $this->featuresManager->getConfigType($config_name);
+        $type = ConfigurationItem::fromConfigStringToConfigType($item['type']);
+        try {
+          $this->configRevert->import($type, $item['name_short']);
+          drupal_set_message($this->t('Imported @name', array('@name' => $config_name)));
+        } catch (\Exception $e) {
+          drupal_set_message($this->t('Error importing @name : @message',
+            array('@name' => $config_name, '@message' => $e->getMessage())), 'error');
+        }
+      }
+    }
   }
 
   /**
