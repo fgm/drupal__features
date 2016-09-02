@@ -53,14 +53,7 @@ assignments:
     weight: 0
   optional:
     types:
-      config:
-        image_style: image_style
-        migration: migration
-        rdf_mapping: rdf_mapping
-        responsive_image_style: responsive_image_style
-        search_page: search_page
-        tour: tour
-        view: view
+      config: {}
     enabled: true
     weight: 0
   packages:
