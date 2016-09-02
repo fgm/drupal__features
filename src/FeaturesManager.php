@@ -106,6 +106,13 @@ class FeaturesManager implements FeaturesManagerInterface {
   protected $assigner;
 
   /**
+   * Cache module.features.yml data keyed by module name.
+   *
+   * @var array
+   */
+  protected $featureInfoCache;
+
+  /**
    * Constructs a FeaturesManager object.
    *
    * @param string $root
@@ -1286,11 +1293,16 @@ class FeaturesManager implements FeaturesManagerInterface {
    * {@inheritdoc}
    */
   public function getFeaturesInfo(Extension $extension) {
+    $module_name = $extension->getName();
+    if (isset($this->featureInfoCache[$module_name])) {
+      return $this->featureInfoCache[$module_name];
+    }
     $features_info = NULL;
-    $filename = $this->root . '/' . $extension->getPath() . '/' . $extension->getName() . '.features.yml';
+    $filename = $this->root . '/' . $extension->getPath() . '/' . $module_name . '.features.yml';
     if (file_exists($filename)) {
       $features_info = Yaml::decode(file_get_contents($filename));
     }
+    $this->featureInfoCache[$module_name] = $features_info;
     return $features_info;
   }
 
