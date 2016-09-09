@@ -11,7 +11,7 @@ use Drupal\features\FeaturesAssignmentMethodBase;
  *   id = "exclude",
  *   weight = -5,
  *   name = @Translation("Exclude"),
- *   description = @Translation("Exclude configuration items from packaging by various methods including by configuration type."),
+ *   description = @Translation("Exclude configuration items from packaging by various methods including by configuration type. When configuration is excluded, it won't be automatically reassigned to other packages."),
  *   config_route_name = "features.assignment_exclude",
  *   default_settings = {
  *     "curated" = FALSE,

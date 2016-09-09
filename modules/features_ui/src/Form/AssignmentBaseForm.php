@@ -33,7 +33,7 @@ class AssignmentBaseForm extends AssignmentFormBase {
     // the config type select options.
     $this->setContentTypeSelect($form, $settings['types']['content'], $this->t('base'), TRUE);
 
-    $this->setActions($form);
+    $this->setActions($form, self::METHOD_ID);
 
     return $form;
   }

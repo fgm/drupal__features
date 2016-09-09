@@ -138,7 +138,18 @@ abstract class AssignmentFormBase extends FormBase {
   /**
    * Adds a "Save settings" submit action.
    */
-  protected function setActions(&$form) {
+  protected function setActions(&$form, $method_id = NULL) {
+    $assignment_info = $this->assigner->getAssignmentMethods();
+    if (isset($method_id) && isset($assignment_info[$method_id])) {
+      $method = $assignment_info[$method_id];
+      $form['help_text'] = array(
+        '#markup' => $method['description'],
+        '#prefix' => '<p class="messages messages--status">',
+        '#suffix' => '</p>',
+        '#weight' => -99,
+      );
+    }
+
     $form['actions'] = array('#type' => 'actions');
     $form['actions']['submit'] = array(
       '#type' => 'submit',

@@ -28,12 +28,6 @@ class AssignmentExcludeForm extends AssignmentFormBase {
     $module_settings = $settings['module'];
     $curated_settings = $settings['curated'];
 
-    $form['help_text'] = array(
-      '#markup' => $this->t("When configuration is excluded, it won't be automatically reassigned to other packages."),
-      '#prefix' => '<p class="messages messages--status">',
-      '#suffix' => '</p>',
-    );
-
     $this->setConfigTypeSelect($form, $settings['types']['config'], $this->t('exclude'), FALSE,
       $this->t("Select types of configuration that should be excluded from packaging."));
 
@@ -104,7 +98,7 @@ class AssignmentExcludeForm extends AssignmentFormBase {
       '#states' => $show_if_namespace_checked,
     );
 
-    $this->setActions($form);
+    $this->setActions($form, self::METHOD_ID);
 
     return $form;
   }

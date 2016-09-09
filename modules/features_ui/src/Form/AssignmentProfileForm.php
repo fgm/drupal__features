@@ -54,7 +54,7 @@ class AssignmentProfileForm extends AssignmentFormBase {
       '#description' => $this->t('Select this option to add module and theme dependencies from the Standard install profile.'),
     );
 
-    $this->setActions($form);
+    $this->setActions($form, self::METHOD_ID);
 
     return $form;
   }

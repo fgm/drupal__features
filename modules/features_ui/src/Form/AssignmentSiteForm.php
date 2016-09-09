@@ -26,7 +26,7 @@ class AssignmentSiteForm extends AssignmentFormBase {
     $settings = $this->currentBundle->getAssignmentSettings(self::METHOD_ID);
 
     $this->setConfigTypeSelect($form, $settings['types']['config'], $this->t('site'));
-    $this->setActions($form);
+    $this->setActions($form, self::METHOD_ID);
 
     return $form;
   }
