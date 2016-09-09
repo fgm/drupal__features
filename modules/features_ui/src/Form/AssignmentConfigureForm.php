@@ -408,7 +408,7 @@ class AssignmentConfigureForm extends FormBase {
     }
     // Otherwise, load the current bundle and rename if needed.
     else {
-      $bundle = $this->assigner->getBundle();
+      $bundle = $this->assigner->loadBundle();
       $old_name = $bundle->getMachineName();
       $new_name = $form_state->getValue(array('bundle', 'machine_name'));
       if ($old_name != $new_name) {
