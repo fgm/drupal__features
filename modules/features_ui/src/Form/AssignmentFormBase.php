@@ -73,7 +73,7 @@ abstract class AssignmentFormBase extends FormBase {
   /**
    * Adds configuration types checkboxes.
    */
-  protected function setConfigTypeSelect(&$form, $defaults, $type, $bundles_only = FALSE) {
+  protected function setConfigTypeSelect(&$form, $defaults, $type, $bundles_only = FALSE, $description = '') {
     $options = $this->featuresManager->listConfigTypes($bundles_only);
 
     if (!isset($form['types'])) {
@@ -86,7 +86,7 @@ abstract class AssignmentFormBase extends FormBase {
     $form['types']['config'] = array(
       '#type' => 'checkboxes',
       '#title' => $this->t('Configuration types'),
-      '#description' => $this->t('Select types of configuration that should be considered @type types.', array('@type' => $type)),
+      '#description' => !empty($description) ? $description : $this->t('Select types of configuration that should be considered @type types.', array('@type' => $type)),
       '#options' => $options,
       '#default_value' => $defaults,
     );
@@ -145,6 +145,11 @@ abstract class AssignmentFormBase extends FormBase {
       '#button_type' => 'primary',
       '#value' => $this->t('Save settings'),
     );
+    $form['#attributes']['class'][] = 'features-assignment-settings-form';
+    $form['#attached'] = array(
+      'library' => array(
+        'features_ui/drupal.features_ui.admin',
+    ));
   }
 
   /**

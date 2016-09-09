@@ -25,27 +25,36 @@ class AssignmentExcludeForm extends AssignmentFormBase {
     $this->currentBundle = $this->assigner->loadBundle($bundle_name);
 
     $settings = $this->currentBundle->getAssignmentSettings(self::METHOD_ID);
-    $this->setConfigTypeSelect($form, $settings['types']['config'], $this->t('exclude'));
-
     $module_settings = $settings['module'];
     $curated_settings = $settings['curated'];
+
+    $form['help_text'] = array(
+      '#markup' => $this->t("When configuration is excluded, it won't be automatically reassigned to other packages."),
+      '#prefix' => '<p class="messages messages--status">',
+      '#suffix' => '</p>',
+    );
+
+    $this->setConfigTypeSelect($form, $settings['types']['config'], $this->t('exclude'), FALSE,
+      $this->t("Select types of configuration that should be excluded from packaging."));
 
     $form['curated'] = array(
       '#type' => 'checkbox',
       '#title' => $this->t('Exclude designated site-specific configuration'),
       '#default_value' => $curated_settings,
-      '#description' => $this->t('Select this option to exclude from packaging items on a curated list of site-specific configuration.'),
+      '#description' => $this->t('Select this option to exclude a curated list of site-specific configuration from packaging.'),
     );
 
     $form['module'] = array(
-      '#type' => 'container',
+      '#type' => 'fieldset',
       '#tree' => TRUE,
+      '#title' => $this->t('Exclude configuration provided by modules'),
     );
+
     $form['module']['installed'] = array(
       '#type' => 'checkbox',
       '#title' => $this->t('Exclude installed module-provided entity configuration'),
       '#default_value' => $module_settings['installed'],
-      '#description' => $this->t('Select this option to exclude from packaging any configuration that is provided by already installed modules.'),
+      '#description' => $this->t('Select this option to exclude configuration provided by INSTALLED modules from reassignment.'),
       '#attributes' => array(
         'data-module-installed' => 'status',
       ),
@@ -62,17 +71,17 @@ class AssignmentExcludeForm extends AssignmentFormBase {
       '#type' => 'checkbox',
       '#title' => $this->t("Don't exclude install profile's configuration"),
       '#default_value' => $module_settings['profile'],
-      '#description' => $this->t("Select this option to not exclude from packaging any configuration that is provided by this site's install profile, %profile.", array('%profile' => $info['name'])),
+      '#description' => $this->t("Select this option to allow configuration provided by the site's install profile (%profile) to be reassigned.", array('%profile' => $info['name'])),
       '#states' => $show_if_module_installed_checked,
     );
 
-    $machine_name = $this->currentBundle->getMachineName();
-    $machine_name = !empty($machine_name) ? $machine_name : $this->t('none');
+    $bundle_name = $this->currentBundle->getMachineName();
+    $bundle_name = !empty($bundle_name) ? $bundle_name : $this->t('none');
     $form['module']['namespace'] = array(
       '#type' => 'checkbox',
       '#title' => $this->t("Don't exclude non-installed configuration by namespace"),
       '#default_value' => $module_settings['namespace'],
-      '#description' => $this->t("Select this option to not exclude from packaging any configuration that is provided by non-installed modules with the package namespace (currently %namespace).", array('%namespace' => $machine_name)),
+      '#description' => $this->t("Select this option to allow configuration provided by uninstalled modules with the bundle namespace (%namespace_*) to be reassigned.", array('%namespace' => $bundle_name)),
       '#states' => $show_if_module_installed_checked,
       '#attributes' => array(
         'data-namespace' => 'status',
@@ -90,8 +99,8 @@ class AssignmentExcludeForm extends AssignmentFormBase {
       '#type' => 'checkbox',
       '#title' => $this->t("Don't exclude ANY configuration by namespace"),
       '#default_value' => $module_settings['namespace_any'],
-      '#description' => $this->t("Select this option to not exclude from packaging any configuration that is provided by ANY modules with the package namespace (currently %namespace).
-        Warning: Can cause installed configuration to be reassigned to different packages.", array('%namespace' => $machine_name)),
+      '#description' => $this->t("Select this option to allow configuration provided by ANY modules with the bundle namespace (%namespace_*) to be reassigned.
+        Warning: Can cause installed configuration to be reassigned to different packages.", array('%namespace' => $bundle_name)),
       '#states' => $show_if_namespace_checked,
     );
 

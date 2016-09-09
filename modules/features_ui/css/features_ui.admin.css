@@ -269,3 +269,8 @@ details.features-export-component .details-wrapper {
   display: inline-block;
   font-size: 10px;
 }
+
+/** Styles for plugin config forms **/
+.features-assignment-settings-form .fieldset-wrapper {
+  padding-left: 16px;
+}
