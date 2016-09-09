@@ -399,7 +399,8 @@ class FeaturesEditForm extends FormBase {
    */
   public function featureExists($value, $element, $form_state) {
     $packages = $this->featuresManager->getPackages();
-    return isset($packages[$value]) || \Drupal::moduleHandler()->moduleExists($value);
+    // A package may conflict only if it's been exported.
+    return (isset($packages[$value]) && ($packages[$value]->getState() !== FeaturesManagerInterface::STATUS_NO_EXPORT)) || \Drupal::moduleHandler()->moduleExists($value);
   }
 
   /**
