@@ -191,6 +191,10 @@ class FeaturesEditForm extends FormBase {
       // Make sure the current bundle matches what is stored in the package.
       // But only do this if the Package value hasn't been manually changed.
       $bundle = $this->assigner->getBundle($this->package->getBundle());
+      if (empty($bundle)) {
+        // Create bundle if it doesn't exist yet
+        $bundle = $this->assigner->createBundleFromDefault($this->package->getBundle());
+      }
       $this->bundle = $bundle->getMachineName();
       $this->assigner->reset();
       $this->assigner->assignConfigPackages(TRUE);
