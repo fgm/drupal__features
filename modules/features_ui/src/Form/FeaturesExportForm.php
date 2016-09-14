@@ -312,6 +312,7 @@ class FeaturesExportForm extends FormBase {
     $new_config = $this->featuresManager->detectNew($package);
     $conflicts = array();
     $missing = array();
+    $moved = array();
 
     if ($package->getStatus() == FeaturesManagerInterface::STATUS_NO_EXPORT) {
       $overrides = array();
@@ -342,13 +343,24 @@ class FeaturesExportForm extends FormBase {
       }
       elseif (!in_array($item_name, $package->getConfig())) {
         $item = $config_collection[$item_name];
-        $conflicts[] = $item_name;
-        $package_name = !empty($item->getPackage()) ? $item->getPackage() : $this->t('PACKAGE NOT ASSIGNED');
-        $package_config[$item->getType()][] = array(
-          'name' => Html::escape($package_name),
-          'label' => Html::escape($item->getLabel()),
-          'class' => 'features-conflict',
-        );
+        if (empty($item->getProvider())) {
+          $conflicts[] = $item_name;
+          $package_name = !empty($item->getPackage()) ? $item->getPackage() : $this->t('PACKAGE NOT ASSIGNED');
+          $package_config[$item->getType()][] = array(
+            'name' => Html::escape($package_name),
+            'label' => Html::escape($item->getLabel()),
+            'class' => 'features-conflict',
+          );
+        }
+        else {
+          $moved[] = $item_name;
+          $package_name = !empty($item->getPackage()) ? $item->getPackage() : $this->t('PACKAGE NOT ASSIGNED');
+          $package_config[$item->getType()][] = array(
+            'name' => $this->t('Moved to @package', array('@package' => $package_name)),
+            'label' => Html::escape($item->getLabel()),
+            'class' => 'features-moved',
+          );
+        }
       }
     }
     // Add dependencies.
@@ -393,6 +405,14 @@ class FeaturesExportForm extends FormBase {
         '#title' => $this->t('Missing'),
         '#url' => Url::fromRoute('features.edit', array('featurename' => $package->getMachineName())),
         '#attributes' => array('class' => array('features-missing')),
+      );
+    }
+    if (!empty($moved)) {
+      $state_links[] = array(
+        '#type' => 'link',
+        '#title' => $this->t('Moved'),
+        '#url' => Url::fromRoute('features.edit', array('featurename' => $package->getMachineName())),
+        '#attributes' => array('class' => array('features-moved')),
       );
     }
     if (!empty($state_links)) {
