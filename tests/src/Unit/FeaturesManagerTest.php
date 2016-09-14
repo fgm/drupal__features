@@ -154,9 +154,12 @@ class FeaturesManagerTest extends UnitTestCase {
 
   /**
    * @covers ::setPackage
+   * @covers ::getPackage
    */
   public function testSetPackage() {
-    // @todo
+    $package = new Package('foo');
+    $this->featuresManager->setPackage($package);
+    $this->assertEquals($package, $this->featuresManager->getPackage('foo'));
   }
 
   protected function getAssignInterPackageDependenciesConfigCollection() {
