@@ -564,7 +564,7 @@ class FeaturesManager implements FeaturesManagerInterface {
         // - it is not flagged as excluded.
         $assignable = (!$item->isProviderExcluded() || $is_profile_package) && !$item->isExcluded();
         // An item is assignable if it was provided by the current package
-        $assignable = $assignable || ($item->getProvider() == $package->getFullName());
+        $assignable = $assignable || ($item->getProvider() == $package->getMachineName());
         $excluded_from_package = in_array($package_name, $item->getPackageExcluded());
         $already_in_package = in_array($item_name, $package->getConfig());
         if (($force || (!$already_assigned && $assignable && !$excluded_from_package)) && !$already_in_package) {
@@ -826,9 +826,9 @@ class FeaturesManager implements FeaturesManagerInterface {
     // If no extension was passed in, look for a match.
     if (!isset($extension)) {
       $module_list = $this->getFeaturesModules($bundle);
-      $full_name = $bundle->getFullName($package->getMachineName());
-      if (isset($module_list[$full_name])) {
-        $extension = $module_list[$full_name];
+      $module_name = $package->getMachineName();
+      if (isset($module_list[$module_name])) {
+        $extension = $module_list[$module_name];
       }
     }
 
