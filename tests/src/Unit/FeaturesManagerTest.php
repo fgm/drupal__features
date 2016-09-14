@@ -457,7 +457,7 @@ class FeaturesManagerTest extends UnitTestCase {
     \Drupal::getContainer()->set('info_parser', $info_parser->reveal());
 
     $bundle = $this->prophesize(FeaturesBundle::class);
-    $bundle->getShortName('test_module')->willReturn('test_module');
+    $bundle->getFullName('test_module')->willReturn('test_module');
     $bundle->isDefault()->willReturn(TRUE);
 
     $assigner = $this->prophesize(FeaturesAssignerInterface::class);
@@ -494,7 +494,7 @@ class FeaturesManagerTest extends UnitTestCase {
     \Drupal::getContainer()->set('info_parser', $info_parser->reveal());
 
     $bundle = $this->prophesize(FeaturesBundle::class);
-    $bundle->getShortName('test_module')->willReturn('test_module');
+    $bundle->getFullName('test_module')->willReturn('test_module');
     $bundle->isDefault()->willReturn(TRUE);
 
     $assigner = $this->prophesize(FeaturesAssignerInterface::class);

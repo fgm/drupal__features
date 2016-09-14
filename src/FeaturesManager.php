@@ -480,10 +480,14 @@ class FeaturesManager implements FeaturesManagerInterface {
    * {@inheritdoc}
    */
   public function initPackage($machine_name, $name = NULL, $description = '', $type = 'module', FeaturesBundleInterface $bundle = NULL, Extension $extension = NULL) {
-    if (!isset($this->packages[$machine_name])) {
-      return $this->packages[$machine_name] = $this->getPackageObject($machine_name, $name, $description, $type, $bundle, $extension);
+    if (isset($this->packages[$machine_name])) {
+      return $this->packages[$machine_name];
     }
-    return $this->packages[$machine_name];
+    // Also look for existing package within the bundle
+    elseif (isset($bundle) && isset($this->packages[$bundle->getFullName($machine_name)])) {
+      return $this->packages[$bundle->getFullName($machine_name)];
+    }
+    return $this->packages[$machine_name] = $this->getPackageObject($machine_name, $name, $description, $type, $bundle, $extension);
   }
 
   /**
@@ -509,8 +513,7 @@ class FeaturesManager implements FeaturesManagerInterface {
     $dependencies = [];
     $type = $config->getType();
     if ($type != FeaturesManagerInterface::SYSTEM_SIMPLE_CONFIG) {
-      $provider = $this->entityManager->getDefinition($type)
-        ->getProvider();
+      $provider = $this->entityManager->getDefinition($type)->getProvider();
       // Ensure the provider is an installed module and not, for example, 'core'
       if (isset($module_list[$provider])) {
         $dependencies[] = $provider;
