@@ -151,6 +151,11 @@ class Package {
   }
 
   /**
+   * Return the full name of the package by prefixing it with bundle as needed
+   *
+   * NOTE: When possible, use the Bundle::getFullName method since it can
+   * better handle cases where a bundle is a profile.
+   *
    * @return string
    */
   public function getFullName() {
