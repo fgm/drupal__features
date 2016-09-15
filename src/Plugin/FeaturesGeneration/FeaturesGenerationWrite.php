@@ -65,19 +65,22 @@ class FeaturesGenerationWrite extends FeaturesGenerationMethodBase implements Co
     // If this package is already present, prepare files.
     if (isset($existing_packages[$package->getMachineName()])) {
       $existing_directory = $existing_packages[$package->getMachineName()];
-
       $package->setDirectory($existing_directory);
+    }
+    else {
+      $existing_directory = $package->getDirectory();
+    }
 
-      // Merge in the info file.
-      $info_file_uri = $this->root . '/' . $existing_directory . '/' . $package->getMachineName() . '.info.yml';
-      if (file_exists($info_file_uri)) {
-        $files = $package->getFiles();
-        $files['info']['string'] = $this->mergeInfoFile($package->getFiles()['info']['string'], $info_file_uri);
-        $package->setFiles($files);
-      }
+    // Merge in the info file.
+    $info_file_uri = $this->root . '/' . $existing_directory . '/' . $package->getMachineName() . '.info.yml';
+    if (file_exists($info_file_uri)) {
+      $files = $package->getFiles();
+      $files['info']['string'] = $this->mergeInfoFile($package->getFiles()['info']['string'], $info_file_uri);
+      $package->setFiles($files);
 
       // Remove the config directories, as they will be replaced.
-      foreach (array_keys($this->featuresManager->getExtensionStorages()->getExtensionStorages()) as $directory) {
+      foreach (array_keys($this->featuresManager->getExtensionStorages()
+        ->getExtensionStorages()) as $directory) {
         $config_directory = $this->root . '/' . $existing_directory . '/' . $directory;
         if (is_dir($config_directory)) {
           file_unmanaged_delete_recursive($config_directory);

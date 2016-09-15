@@ -82,7 +82,11 @@ abstract class FeaturesGenerationMethodBase implements FeaturesGenerationMethodI
 
       // If this is the profile, its directory is already assigned.
       if (!isset($bundle) || !$bundle->isProfilePackage($package->getMachineName())) {
-        $package->setDirectory($package->getDirectory() . '/' . $full_name);
+        $current_path = $package->getDirectory();
+        if (strpos($current_path, $full_name) < strlen($current_path) - strlen($full_name)) {
+          // Only append package name if it isn't already there.
+          $package->setDirectory($package->getDirectory() . '/' . $full_name);
+        }
       }
 
       $this->preparePackage($package, $existing_packages, $bundle);

@@ -34,6 +34,14 @@ interface FeaturesManagerInterface {
   const STATE_OVERRIDDEN = 1;
 
   /**
+   * Set the app.root.
+   *
+   * Should only be used by tests.
+   * @param string $root
+   */
+  public function setRoot($root);
+
+  /**
    * Returns the active config store.
    *
    * @return \Drupal\Core\Config\StorageInterface
@@ -507,7 +515,7 @@ interface FeaturesManagerInterface {
   public function getExportInfo(Package $package, FeaturesBundleInterface $bundle = NULL);
 
   /**
-   * Determines if the module is a Features package, optinally testing by
+   * Determines if the module is a Features package, optionally testing by
    * bundle.
    *
    * @param \Drupal\Core\Extension\Extension $module

@@ -149,6 +149,15 @@ class FeaturesManager implements FeaturesManagerInterface {
   /**
    * {@inheritdoc}
    */
+  public function setRoot($root) {
+    $this->root = $root;
+    // Clear cache.
+    $this->featureInfoCache = [];
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getActiveStorage() {
     return $this->configStorage;
   }
@@ -347,7 +356,7 @@ class FeaturesManager implements FeaturesManagerInterface {
    * {@inheritdoc}
    */
   public function getExtensionInfo(Extension $extension) {
-    return \Drupal::service('info_parser')->parse(\Drupal::root() . '/' . $extension->getPathname());
+    return \Drupal::service('info_parser')->parse($this->root . '/' . $extension->getPathname());
   }
 
   /**
@@ -385,11 +394,15 @@ class FeaturesManager implements FeaturesManagerInterface {
       $machine_names[] = $bundle->getProfileName();
     }
 
+    // If we are checking the default bundle, return all features.
+    if (isset($bundle) && $bundle->isDefault()) {
+      $bundle = NULL;
+    }
+
     $modules = $this->getFeaturesModules($bundle);
     // Filter to include only the requested packages.
     $modules = array_filter($modules, function ($module) use ($bundle, $machine_names) {
-      $short_name = $bundle->getShortName($module->getName());
-      return in_array($short_name, $machine_names);
+      return in_array($module->getName(), $machine_names);
     });
 
     $directories = array();
@@ -411,7 +424,7 @@ class FeaturesManager implements FeaturesManagerInterface {
       // modules. system_rebuild_module_data() includes only the site's install
       // profile directory, while we may need to include a custom profile.
       // @see _system_rebuild_module_data().
-      $listing = new ExtensionDiscovery(\Drupal::root());
+      $listing = new ExtensionDiscovery($this->root);
 
       $profile_directories = $listing->setProfileDirectoriesFromSettings()->getProfileDirectories();
       $installed_profile = $this->drupalGetProfile();
@@ -444,19 +457,10 @@ class FeaturesManager implements FeaturesManagerInterface {
     $modules = $this->getAllModules();
 
     // Filter by bundle.
-    if (isset($bundle)) {
-      $features_manager = $this;
-      $modules = array_filter($modules, function ($module) use ($features_manager, $bundle) {
-        return $features_manager->isFeatureModule($module, $bundle);
-      });
-    }
-    else {
-      // No bundle filter, but still only return "Feature" modules
-      $features_manager = $this;
-      $modules = array_filter($modules, function ($module) use ($features_manager) {
-        return $features_manager->isFeatureModule($module);
-      });
-    }
+    $features_manager = $this;
+    $modules = array_filter($modules, function ($module) use ($features_manager, $bundle) {
+      return $features_manager->isFeatureModule($module, $bundle);
+    });
 
     // Filtered by installed status.
     if ($installed) {
@@ -934,12 +938,10 @@ class FeaturesManager implements FeaturesManagerInterface {
    */
   protected function addPackageFiles(Package $package) {
     $config_collection = $this->getConfigCollection();
-    // Only add files if there is at least one piece of configuration
-    // present.
+    // Always add .info.yml and .features.yml files.
+    $this->addInfoFile($package);
+    // Only add files if there is at least one piece of configuration present.
     if ($package->getConfig()) {
-      // Add .info.yml files.
-      $this->addInfoFile($package);
-
       // Add configuration files.
       foreach ($package->getConfig() as $name) {
         $config = $config_collection[$name];
