@@ -76,6 +76,9 @@ class FeaturesManagerTest extends UnitTestCase {
     $entity_type->expects($this->any())
       ->method('getConfigPrefix')
       ->willReturn('custom');
+    $entity_type->expects($this->any())
+      ->method('getProvider')
+      ->willReturn('my_module');
     $this->entityManager = $this->getMock('\Drupal\Core\Entity\EntityManagerInterface');
     $this->entityManager->expects($this->any())
       ->method('getDefinition')
@@ -84,6 +87,11 @@ class FeaturesManagerTest extends UnitTestCase {
     $this->configStorage = $this->getMock(StorageInterface::class);
     $this->configManager = $this->getMock(ConfigManagerInterface::class);
     $this->moduleHandler = $this->getMock(ModuleHandlerInterface::class);
+    // getModuleList should return an array of extension objects.
+    // but we just need ::getConfigDependency isset($module_list[$provider]).
+    $this->moduleHandler->expects($this->any())
+      ->method('getModuleList')
+      ->willReturn(['my_module' => true]);
     $this->featuresManager = new FeaturesManager($this->root, $this->entityManager, $this->configFactory, $this->configStorage, $this->configManager, $this->moduleHandler);
 
     $string_translation = $this->getStringTranslationStub();
@@ -412,7 +420,7 @@ class FeaturesManagerTest extends UnitTestCase {
     $this->featuresManager->assignConfigPackage('test_package', ['test_config', 'test_config2']);
 
     $this->assertEquals(['test_config', 'test_config2'], $this->featuresManager->getPackage('test_package')->getConfig());
-    $this->assertEquals(['example'], $this->featuresManager->getPackage('test_package')->getDependencies());
+    $this->assertEquals(['example', 'my_module'], $this->featuresManager->getPackage('test_package')->getDependencies());
   }
 
   /**
