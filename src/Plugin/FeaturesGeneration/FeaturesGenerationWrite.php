@@ -3,6 +3,7 @@
 namespace Drupal\features\Plugin\FeaturesGeneration;
 
 use Drupal\Core\Plugin\ContainerFactoryPluginInterface;
+use Drupal\Core\File\FileSystemInterface;
 use Drupal\features\FeaturesGenerationMethodBase;
 use Drupal\features\FeaturesBundleInterface;
 use Drupal\features\Package;
@@ -33,13 +34,20 @@ class FeaturesGenerationWrite extends FeaturesGenerationMethodBase implements Co
   protected $root;
 
   /**
+   * The file_system service.
+   * @var \Drupal\Core\File\FileSystemInterface
+   */
+  protected $fileSystem;
+
+  /**
    * Creates a new FeaturesGenerationWrite instance.
    *
    * @param string $root
    *   The app root.
    */
-  public function __construct($root) {
+  public function __construct($root, FileSystemInterface $fileSystem) {
     $this->root = $root;
+    $this->fileSystem = $fileSystem;
   }
 
   /**
@@ -47,7 +55,8 @@ class FeaturesGenerationWrite extends FeaturesGenerationMethodBase implements Co
    */
   public static function create(ContainerInterface $container, array $configuration, $plugin_id, $plugin_definition) {
     return new static(
-      $container->get('app.root')
+      $container->get('app.root'),
+      $container->get('file_system')
     );
   }
 
@@ -216,7 +225,7 @@ class FeaturesGenerationWrite extends FeaturesGenerationMethodBase implements Co
     }
     $directory = $this->root . '/' . $directory;
     if (!is_dir($directory)) {
-      if (drupal_mkdir($directory, NULL, TRUE) === FALSE) {
+      if ($this->fileSystem->mkdir($directory, NULL, TRUE) === FALSE) {
         throw new \Exception($this->t('Failed to create directory @directory.', ['@directory' => $directory]));
       }
     }
