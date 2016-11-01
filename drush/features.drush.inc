@@ -267,11 +267,14 @@ function drush_features_list_packages($package_name = '') {
  *
  */
 function drush_features_import_all() {
-  _drush_features_options();
+  $assigner = _drush_features_options();
+  $current_bundle = $assigner->getBundle();
+  $namespace = $current_bundle->isDefault() ? '' : $current_bundle->getMachineName();
+
   /** @var \Drupal\features\FeaturesManagerInterface $manager */
   $manager = \Drupal::service('features.manager');
   $packages = $manager->getPackages();
-  $packages = $manager->filterPackages($packages);
+  $packages = $manager->filterPackages($packages, $namespace);
   $overridden = array();
 
   foreach ($packages as $package) {
