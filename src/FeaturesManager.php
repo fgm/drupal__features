@@ -615,7 +615,7 @@ class FeaturesManager implements FeaturesManagerInterface {
             }
           }
 
-          if (!$item->getPackage() && preg_match('/[_\-.]' . $pattern . '[_\-.]/', '.' . $item->getShortName() . '.')) {
+          if (!$item->getPackage() && preg_match('/(\.|^)' . $pattern . '(\.|-|_|$)/', $item->getShortName())) {
             try {
               $this->assignConfigPackage($machine_name, [$item_name]);
             }

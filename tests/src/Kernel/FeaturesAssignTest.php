@@ -96,7 +96,7 @@ class FeaturesAssignTest extends KernelTestBase {
 
     $expected_package_names = ['article', 'user'];
 
-    $this->assertEquals($expected_package_names, array_keys($packages), 'Expected packages not created.');  
+    $this->assertEquals($expected_package_names, array_keys($packages), 'Expected packages not created.');
 
     $expected_config_items = [
       'node.type.article',
@@ -139,7 +139,7 @@ class FeaturesAssignTest extends KernelTestBase {
 
     $expected_package_names = ['core'];
 
-    $this->assertEquals($expected_package_names, array_keys($packages), 'Expected packages not created.');  
+    $this->assertEquals($expected_package_names, array_keys($packages), 'Expected packages not created.');
 
     $this->assertTrue(in_array('field.storage.node.body', $packages['core']->getConfig(), 'Expected configuration item not present in core package.'));
     $this->assertFalse(in_array('field.field.node.article.body', $packages['core']->getConfig(), 'Unexpected configuration item present in core package.'));
@@ -441,10 +441,11 @@ class FeaturesAssignTest extends KernelTestBase {
       'type' => 'node_type',
       'shortName' => 'prefix_article',
     ]);
-    $this->addConfigurationItem('node.type.nonprefix_article', [], [
+    $this->addConfigurationItem('node.type.non_prefix_article', [], [
       'type' => 'node_type',
-      'shortName' => 'nonprefix_article',
+      'shortName' => 'non_prefix_article',
     ]);
+
     $this->featuresManager->initPackage('prefix', 'My test package');
     $this->assigner->applyAssignmentMethod($method_id);
 
