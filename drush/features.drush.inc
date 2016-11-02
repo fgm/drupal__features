@@ -494,7 +494,7 @@ function drush_features_diff() {
     $filter_ctypes = explode(',', $filter_ctypes);
   }
 
-  $feature = _drush_features_load_feature($module, TRUE);
+  $feature = $manager->loadPackage($module, TRUE);
   if (empty($feature)) {
     drush_log(dt('No such feature is available: @module', array('@module' => $module)), 'error');
     return;
@@ -616,7 +616,7 @@ function drush_features_import() {
 
       $dt_args['@module'] = $module;
       /** @var \Drupal\features\Package $feature */
-      $feature = _drush_features_load_feature($module, TRUE);
+      $feature = $manager->loadPackage($module, TRUE);
       if (empty($feature)) {
         drush_log(dt('No such feature is available: @module', $dt_args), 'error');
         return;
@@ -680,35 +680,6 @@ function drush_features_import() {
     drush_print_table(drush_features_list_packages());
     return;
   }
-}
-
-/**
- * Loads a Features package.
- *
- * @param string $module
- *   The machine name of a module.
- * @param bool $any
- *   If TRUE then check for any module, not just a Features module.
- *
- * @return array
- */
-function _drush_features_load_feature($module, $any = FALSE) {
-  /** @var \Drupal\features\FeaturesManagerInterface $manager */
-  $manager = \Drupal::service('features.manager');
-  $feature = $manager->getPackage($module);
-  if ($any && !isset($feature)) {
-    // See if this is a non-features module.
-    $module_handler = \Drupal::moduleHandler();
-    $modules = $module_handler->getModuleList();
-    if (!empty($modules[$module])) {
-      $extension = $modules[$module];
-      $feature = $manager->initPackageFromExtension($extension);
-      $config = $manager->listExtensionConfig($extension);
-      $feature->setConfig($config);
-      $feature->setStatus(FeaturesManagerInterface::STATUS_INSTALLED);
-    }
-  }
-  return $feature;
 }
 
 /**
