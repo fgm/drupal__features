@@ -304,8 +304,8 @@ class FeaturesManager implements FeaturesManagerInterface {
     if ($any && !isset($package)) {
       // See if this is a non-features module.
       $module_list = $this->moduleHandler->getModuleList();
-      if (!empty($module_list[$module])) {
-        $extension = $module_list[$module];
+      if (!empty($module_list[$module_name])) {
+        $extension = $module_list[$module_name];
         $package = $this->initPackageFromExtension($extension);
         $config = $this->listExtensionConfig($extension);
         $package->setConfig($config);
