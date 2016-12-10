@@ -98,9 +98,9 @@ class FeaturesAssignTest extends KernelTestBase {
 
     $this->assertEquals($expected_package_names, array_keys($packages), 'Expected packages not created.');
 
+    // Dependents like field.field.node.article.body should not be assigned.
     $expected_config_items = [
       'node.type.article',
-      'field.field.node.article.body',
     ];
 
     $this->assertEquals($expected_config_items, $packages['article']->getConfig(), 'Expected configuration items not present in article package.');
