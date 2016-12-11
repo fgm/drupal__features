@@ -436,6 +436,9 @@ class FeaturesAssignTest extends KernelTestBase {
     // Enable the method.
     $this->enableAssignmentMethod($method_id);
 
+    // Apply the bundle
+    $this->bundle = $this->assigner->loadBundle('test_mybundle');
+
     $package_data = [
       'article' => [
         // Items that should be assigned to 'article'.
@@ -480,6 +483,25 @@ class FeaturesAssignTest extends KernelTestBase {
         'something-before_article-something',
         'something.before_article.something',
         'something.before_article_something',
+      ],
+      // Emulate an existing feature, which has a machine name prefixed by
+      // the bundle name.
+      'test_mybundle_page' => [
+        // Items that should be assigned to 'test_mybundle_page'.
+        // Items should match the short name, 'page'.
+        'page',
+        'page-after',
+        'before.page',
+        'something_page',
+        'something-page',
+        'something.page',
+        'page_something',
+        'page-something',
+        'page.something',
+        'something_page_something',
+        'something-page-something',
+        'something.page.something',
+        'something.page_something',
       ],
     ];
 
