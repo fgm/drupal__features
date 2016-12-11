@@ -631,9 +631,13 @@ class FeaturesManager implements FeaturesManagerInterface {
       '/block\.block\..*_page_title/',
     ];
     $config_collection = $this->getConfigCollection();
-    // Reverse sort by key so that child package will claim items before parent
-    // package. E.g., event_registration will claim before event.
-    krsort($config_collection);
+    // Sort by key so that specific package will claim items before general
+    // package. E.g., event_registration and registration_event will claim
+    // before event.
+    uksort($patterns, function($a, $b) {
+      // Count underscores to determine specificity of the package.
+      return (int) (substr_count($a, '_') <= substr_count($b, '_'));
+    });
     foreach ($patterns as $pattern => $machine_name) {
       if (isset($this->packages[$machine_name])) {
         foreach ($config_collection as $item_name => $item) {
@@ -644,7 +648,7 @@ class FeaturesManager implements FeaturesManagerInterface {
             }
           }
 
-          if (!$item->getPackage() && preg_match('/(\.|^)' . $pattern . '(\.|-|_|$)/', $item->getShortName())) {
+          if (!$item->getPackage() && preg_match('/(\.|-|_|^)' . $pattern . '(\.|-|_|$)/', $item->getShortName())) {
             try {
               $this->assignConfigPackage($machine_name, [$item_name]);
             }

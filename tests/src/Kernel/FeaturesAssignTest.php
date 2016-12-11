@@ -436,26 +436,91 @@ class FeaturesAssignTest extends KernelTestBase {
     // Enable the method.
     $this->enableAssignmentMethod($method_id);
 
-    // Add some configuration.
-    $this->addConfigurationItem('node.type.prefix_article', [], [
-      'type' => 'node_type',
-      'shortName' => 'prefix_article',
-    ]);
-    $this->addConfigurationItem('node.type.non_prefix_article', [], [
-      'type' => 'node_type',
-      'shortName' => 'non_prefix_article',
-    ]);
-
-    $this->featuresManager->initPackage('prefix', 'My test package');
-    $this->assigner->applyAssignmentMethod($method_id);
-
-    $packages = $this->featuresManager->getPackages();
-    $this->assertNotEmpty($packages['prefix'], 'Expected package not created.');
-
-    $expected_config_items = [
-      'node.type.prefix_article',
+    $package_data = [
+      'article' => [
+        // Items that should be assigned to 'article'.
+        'article',
+        'article-after',
+        'before.article',
+        'something_article',
+        'something-article',
+        'something.article',
+        'article_something',
+        'article-something',
+        'article.something',
+        'something_article_something',
+        'something-article-something',
+        'something.article.something',
+        'something.article_something',
+      ],
+      'article_after' => [
+        // Items that should be assigned to 'article_after'.
+        'article_after',
+        'something_article_after',
+        'something-article_after',
+        'something.article_after',
+        'article_after_something',
+        'article_after-something',
+        'article_after.something',
+        'something_article_after_something',
+        'something-article_after-something',
+        'something.article_after.something',
+        'something.article_after_something',
+      ],
+      'before_article' => [
+        // Items that should be assigned to 'before_article'.
+        'before_article',
+        'something_before_article',
+        'something-before_article',
+        'something.before_article',
+        'before_article_something',
+        'before_article-something',
+        'before_article.something',
+        'something_before_article_something',
+        'something-before_article-something',
+        'something.before_article.something',
+        'something.before_article_something',
+      ],
     ];
-    $this->assertEquals($expected_config_items, $packages['prefix']->getConfig(), 'Expected configuration items not present in prefix package.');
+
+    foreach ($package_data as $machine_name => $config_short_names) {
+      $this->featuresManager->initPackage($machine_name, 'My test package ' . $machine_name);
+      foreach ($config_short_names as $short_name) {
+        $this->addConfigurationItem('node.type.' . $short_name, [], [
+          'type' => 'node_type',
+          'shortName' => $short_name,
+        ]);
+      }
+    }
+
+    // Add some config that should not be matched.
+    $config_short_names = [
+     'example',
+     'example_something',
+     'article~',
+     'myarticle',
+    ];
+    foreach ($config_short_names as $short_name) {
+      $this->addConfigurationItem('node.type.' . $short_name, [], [
+        'type' => 'node_type',
+        'shortName' => $short_name,
+      ]);
+    }
+
+    $this->assigner->applyAssignmentMethod($method_id);
+    $packages = $this->featuresManager->getPackages();
+
+    foreach ($package_data as $machine_name => $config_short_names) {
+      $this->assertNotEmpty($packages[$machine_name], 'Expected package ' . $machine_name . ' not created.');
+      array_walk($config_short_names, function(&$value) {
+        $value = 'node.type.' . $value;
+      });
+      sort($config_short_names);
+      $package_config = $packages[$machine_name]->getConfig();
+      sort($package_config);
+      $this->assertEquals($config_short_names, $package_config, 'Expected configuration items not present in ' . $machine_name . ' package.');
+    }
+
   }
 
   /**
