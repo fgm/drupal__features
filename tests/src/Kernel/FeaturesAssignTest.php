@@ -4,6 +4,7 @@ namespace Drupal\Tests\features\Kernel;
 
 use Drupal\KernelTests\KernelTestBase;
 use Drupal\features\ConfigurationItem;
+use Drupal\features\FeaturesManagerInterface;
 use Drupal\Core\Config\InstallStorage;
 
 /**
@@ -60,6 +61,117 @@ class FeaturesAssignTest extends KernelTestBase {
 
     // Start with an empty configuration collection.
     $this->featuresManager->setConfigCollection([]);
+  }
+
+  /**
+   * @covers Drupal\features\Plugin\FeaturesAssignment\FeaturesAssignmentAlter
+   */
+  public function testAssignAlter() {
+    $method_id = 'alter';
+
+    // Enable the method.
+    $this->enableAssignmentMethod($method_id);
+
+    // Add some configuration.
+    $this->addConfigurationItem('example.settings', [
+      '_core' => ['something'],
+      'uuid' => 'something',
+    ],
+    [
+      'type' => FeaturesManagerInterface::SYSTEM_SIMPLE_CONFIG,
+    ]);
+    $this->addConfigurationItem('node.type.article', [
+      '_core' => ['something'],
+      'uuid' => 'something',
+      'permissions' => [
+        'first',
+        'second',
+      ],
+    ],
+    [
+      'type' => 'node_type',
+    ]);
+    $this->addConfigurationItem('user.role.test', [
+      '_core' => ['something'],
+      'uuid' => 'something',
+      'permissions' => [
+        'first',
+        'second',
+      ],
+    ],
+    [
+      'type' => 'user_role',
+    ]);
+
+    // Set all settings to FALSE.
+    $settings = [
+      'core' => FALSE,
+      'uuid' => FALSE,
+      'user_permissions' => FALSE,
+    ];
+    $this->bundle->setAssignmentSettings($method_id, $settings);
+
+    $this->assigner->applyAssignmentMethod($method_id);
+
+    $config = $this->featuresManager->getConfigCollection();
+    $this->assertNotEmpty($config['example.settings'], 'Expected config not created.');
+    $this->assertNotEmpty($config['node.type.article'], 'Expected config not created.');
+    $this->assertNotEmpty($config['user.role.test'], 'Expected config not created.');
+
+    $example_settings_data = $config['example.settings']->getData();
+    $this->assertEquals($example_settings_data['_core'], ['something'], 'Expected _core value missing.');
+    $this->assertEquals($example_settings_data['uuid'], 'something', 'Expected uuid value missing.');
+
+    $node_type_data = $config['node.type.article']->getData();
+    $this->assertEquals($node_type_data['_core'], ['something'], 'Expected _core value missing.');
+    $this->assertEquals($node_type_data['uuid'], 'something', 'Expected uuid value missing.');
+    $this->assertEquals($node_type_data['permissions'], [
+      'first',
+      'second',
+    ], 'Expected permissions value missing.');
+
+    $user_role_data = $config['user.role.test']->getData();
+    $this->assertEquals($user_role_data['_core'], ['something'], 'Expected _core value missing.');
+    $this->assertEquals($user_role_data['uuid'], 'something', 'Expected uuid value missing.');
+    $this->assertEquals($user_role_data['permissions'], [
+      'first',
+      'second',
+    ], 'Expected permissions value missing.');
+
+    // Set all settings to TRUE.
+    $settings = [
+      'core' => TRUE,
+      'uuid' => TRUE,
+      'user_permissions' => TRUE,
+    ];
+    $this->bundle->setAssignmentSettings($method_id, $settings);
+
+    $this->assigner->applyAssignmentMethod($method_id);
+
+    $config = $this->featuresManager->getConfigCollection();
+    $this->assertNotEmpty($config['example.settings'], 'Expected config not created.');
+    $this->assertNotEmpty($config['node.type.article'], 'Expected config not created.');
+    $this->assertNotEmpty($config['user.role.test'], 'Expected config not created.');
+
+    $example_settings_data = $config['example.settings']->getData();
+    $this->assertFalse(isset($example_settings_data['_core']), 'Unexpected _core value present.');
+    // uuid should be retained for simple configuration.
+    $this->assertEquals($example_settings_data['uuid'], 'something', 'Expected uuid value missing.');
+
+    $node_type_data = $config['node.type.article']->getData();
+    $this->assertFalse(isset($node_type_data['_core']), 'Unexpected _core value present.');
+    $this->assertFalse(isset($node_type_data['uuid']), 'Unexpected uuid value present.');
+    // permissions should be stripped only for user_role configuration.
+    $this->assertEquals($node_type_data['permissions'], [
+      'first',
+      'second',
+    ], 'Expected permissions value missing.');
+
+    $user_role_data = $config['user.role.test']->getData();
+    $this->assertFalse(isset($user_role_data['_core']), 'Unexpected _core value present.');
+    $this->assertFalse(isset($user_role_data['uuid']), 'Unexpected uuid value present.');
+    $this->assertFalse(isset($user_role_data['permissions']), 'Unexpected permissions value present.');
+
   }
 
   /**
