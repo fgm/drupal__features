@@ -78,6 +78,17 @@ class FeaturesManagerTest extends UnitTestCase {
   public function setUp() {
     parent::setUp();
 
+    $container = new ContainerBuilder();
+    $container->set('string_translation', $this->getStringTranslationStub());
+    $container->set('app.root', $this->root);
+    // Since in Drupal 8.3 the "\Drupal::installProfile()" was introduced
+    // then we have to spoof a value for the "install_profile" parameter
+    // because it will be used by "ExtensionInstallStorage" class, which
+    // extends the "FeaturesInstallStorage".
+    // @see \Drupal\features\FeaturesConfigInstaller::__construct()
+    $container->setParameter('install_profile', '');
+    \Drupal::setContainer($container);
+
     $entity_type = $this->getMock('\Drupal\Core\Config\Entity\ConfigEntityTypeInterface');
     $entity_type->expects($this->any())
       ->method('getConfigPrefix')
@@ -106,12 +117,6 @@ class FeaturesManagerTest extends UnitTestCase {
       ->method('revert')
       ->willReturn(true);
     $this->featuresManager = new FeaturesManager($this->root, $this->entityManager, $this->configFactory, $this->configStorage, $this->configManager, $this->moduleHandler, $this->configReverter);
-
-    $string_translation = $this->getStringTranslationStub();
-    $container = new ContainerBuilder();
-    $container->set('string_translation', $string_translation);
-    $container->set('app.root', $this->root);
-    \Drupal::setContainer($container);
   }
 
   /**
