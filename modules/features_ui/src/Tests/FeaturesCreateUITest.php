@@ -147,6 +147,7 @@ class FeaturesCreateUITest extends WebTestBase {
     $this->assertTrue(strpos($tr->children()[6]->asXml(), 'Changed') !== FALSE);
 
     $this->clickLink($this->t('Changed'));
+    $this->drupalGet('admin/config/development/features/diff/' . $feature_name);
     $this->assertRaw('<td class="diff-context diff-deletedline">anonymous : Anonymous <span class="diffchange">giraffe</span></td>');
     $this->assertRaw('<td class="diff-context diff-addedline">anonymous : Anonymous</td>');
 
