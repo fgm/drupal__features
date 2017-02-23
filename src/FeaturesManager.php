@@ -8,7 +8,7 @@ use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Config\ConfigManagerInterface;
 use Drupal\Core\Config\InstallStorage;
 use Drupal\Core\Config\StorageInterface;
-use Drupal\Core\Entity\EntityManagerInterface;
+use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Entity\EntityTypeInterface;
 use Drupal\Core\Extension\Extension;
 use Drupal\Core\Extension\ExtensionDiscovery;
@@ -23,11 +23,11 @@ class FeaturesManager implements FeaturesManagerInterface {
   use StringTranslationTrait;
 
   /**
-   * The entity manager.
+   * The entity type manager.
    *
-   * @var \Drupal\Core\Entity\EntityManagerInterface
+   * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
-  protected $entityManager;
+  protected $entityTypeManager;
 
   /**
    * The target storage.
@@ -125,8 +125,8 @@ class FeaturesManager implements FeaturesManagerInterface {
    *
    * @param string $root
    *   The app root.
-   * @param \Drupal\Core\Entity\EntityManagerInterface $entity_manager
-   *   The entity manager.
+   * @param \Drupal\Core\Entity\EntityTypeManagerInterface $entity_type_manager
+   *   The entity type manager.
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The configuration factory.
    * @param \Drupal\Core\Config\StorageInterface $config_storage
@@ -137,11 +137,11 @@ class FeaturesManager implements FeaturesManagerInterface {
    *   The module handler.
    * @param \Drupal\config_update\ConfigRevertInterface $config_reverter
    */
-  public function __construct($root, EntityManagerInterface $entity_manager, ConfigFactoryInterface $config_factory,
+  public function __construct($root, EntityTypeManagerInterface $entity_type_manager, ConfigFactoryInterface $config_factory,
                               StorageInterface $config_storage, ConfigManagerInterface $config_manager,
                               ModuleHandlerInterface $module_handler, ConfigRevertInterface $config_reverter) {
     $this->root = $root;
-    $this->entityManager = $entity_manager;
+    $this->entityTypeManager = $entity_type_manager;
     $this->configStorage = $config_storage;
     $this->configManager = $config_manager;
     $this->moduleHandler = $module_handler;
@@ -187,7 +187,7 @@ class FeaturesManager implements FeaturesManagerInterface {
       return $name;
     }
 
-    $definition = $this->entityManager->getDefinition($type);
+    $definition = $this->entityTypeManager->getDefinition($type);
     $prefix = $definition->getConfigPrefix() . '.';
     return $prefix . $name;
   }
@@ -206,7 +206,7 @@ class FeaturesManager implements FeaturesManagerInterface {
       $result['name_short'] = substr($fullname, strlen($prefix));
     }
     else {
-      foreach ($this->entityManager->getDefinitions() as $entity_type => $definition) {
+      foreach ($this->entityTypeManager->getDefinitions() as $entity_type => $definition) {
         if ($definition->isSubclassOf('Drupal\Core\Config\Entity\ConfigEntityInterface')) {
           $prefix = $definition->getConfigPrefix() . '.';
           if (strpos($fullname, $prefix) === 0) {
@@ -547,7 +547,7 @@ class FeaturesManager implements FeaturesManagerInterface {
     $dependencies = [];
     $type = $config->getType();
     if ($type != FeaturesManagerInterface::SYSTEM_SIMPLE_CONFIG) {
-      $provider = $this->entityManager->getDefinition($type)->getProvider();
+      $provider = $this->entityTypeManager->getDefinition($type)->getProvider();
       // Ensure the provider is an installed module and not, for example, 'core'
       if (isset($module_list[$provider])) {
         $dependencies[] = $provider;
@@ -1017,7 +1017,7 @@ class FeaturesManager implements FeaturesManagerInterface {
    */
   public function listConfigTypes($bundles_only = FALSE) {
     $definitions = [];
-    foreach ($this->entityManager->getDefinitions() as $entity_type => $definition) {
+    foreach ($this->entityTypeManager->getDefinitions() as $entity_type => $definition) {
       if ($definition->isSubclassOf('Drupal\Core\Config\Entity\ConfigEntityInterface')) {
         if (!$bundles_only || $definition->getBundleOf()) {
           $definitions[$entity_type] = $definition;
@@ -1062,7 +1062,7 @@ class FeaturesManager implements FeaturesManagerInterface {
   public function listConfigByType($config_type) {
     // For a given entity type, load all entities.
     if ($config_type && $config_type !== FeaturesManagerInterface::SYSTEM_SIMPLE_CONFIG) {
-      $entity_storage = $this->entityManager->getStorage($config_type);
+      $entity_storage = $this->entityTypeManager->getStorage($config_type);
       $names = [];
       foreach ($entity_storage->loadMultiple() as $entity) {
         $entity_id = $entity->id();
@@ -1073,7 +1073,7 @@ class FeaturesManager implements FeaturesManagerInterface {
     // Handle simple configuration.
     else {
       $definitions = [];
-      foreach ($this->entityManager->getDefinitions() as $entity_type => $definition) {
+      foreach ($this->entityTypeManager->getDefinitions() as $entity_type => $definition) {
         if ($definition->isSubclassOf('Drupal\Core\Config\Entity\ConfigEntityInterface')) {
           $definitions[$entity_type] = $definition;
         }

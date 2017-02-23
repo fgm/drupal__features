@@ -53,7 +53,7 @@ class FeaturesAssignmentBaseType extends FeaturesAssignmentMethodBase {
       }
     }
 
-    $entity_types = $this->entityManager->getDefinitions();
+    $entity_types = $this->entityTypeManager->getDefinitions();
 
     $content_base_types = $settings['types']['content'];
     foreach ($content_base_types as $entity_type_id) {
