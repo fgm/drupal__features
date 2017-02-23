@@ -586,8 +586,6 @@ function drush_features_import() {
 
     /** @var \Drupal\features\FeaturesManagerInterface $manager */
     $manager = \Drupal::service('features.manager');
-    /** @var \Drupal\config_update\ConfigRevertInterface $config_revert */
-    $config_revert = \Drupal::service('features.config_update');
 
     // Parse list of arguments.
     $modules = array();
@@ -647,30 +645,34 @@ function drush_features_import() {
         drush_log(dt('Current state already matches active config, aborting.'), 'ok');
       }
       else {
+        // Determine which config the user wants to import/revert.
         $config = $manager->getConfigCollection();
+        $config_to_create = [];
         foreach ($components as $component) {
           $dt_args['@component'] = $component;
           $confirmation_message = 'Do you really want to import @module : @component?';
           if ($skip_confirmation || drush_confirm(dt($confirmation_message, $dt_args))) {
-            if (!isset($config[$component])) {
-              // Import missing component.
-              /** @var array $item */
-              $item = $manager->getConfigType($component);
-              $type = ConfigurationItem::fromConfigStringToConfigType($item['type']);
-              $config_revert->import($type, $item['name_short']);
-              drush_log(dt('Import @module : @component.', $dt_args), 'ok');
-            }
-            else {
-              // Revert existing component.
-              /** @var \Drupal\features\ConfigurationItem $item */
-              $item = $config[$component];
-              $type = ConfigurationItem::fromConfigStringToConfigType($item->getType());
-              $config_revert->revert($type, $item->getShortName());
-              drush_log(dt('Reverted @module : @component.', $dt_args), 'ok');
-            }
+            $config_to_create[$component] = $config[$component];
+          }
+        }
+
+        // Perform the import/revert.
+        $config_imported = $manager->createConfiguration($config_to_create);
+
+        // List the results.
+        foreach ($components as $component) {
+          $dt_args['@component'] = $component;
+          if (isset($config_imported['new'][$component])) {
+            drush_log(dt('Imported @module : @component.', $dt_args), 'ok');
+          }
+          elseif (isset($config_imported['updated'][$component])) {
+            drush_log(dt('Reverted @module : @component.', $dt_args), 'ok');
+          }
+          elseif (!isset($config_to_create[$component])) {
+            drush_log(dt('Skipping @module : @component.', $dt_args), 'ok');
           }
           else {
-            drush_log(dt('Skipping @module : @component.', $dt_args), 'ok');
+            drush_log(dt('Error importing @module : @component.', $dt_args), 'error');
           }
         }
       }

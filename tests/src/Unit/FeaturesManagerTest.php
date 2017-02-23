@@ -760,41 +760,6 @@ EOT
     $this->assertEquals(['test_bundle_test_feature', 'modules/custom'], $result);
   }
 
-  /**
-   * @covers ::import
-   */
-  public function testImport() {
-    $packages = [
-      'package' => new Package('package', [
-        'configOrig' => ['system_simple.example' => 'system_simple.example'],
-        'dependencies' => [],
-        'bundle' => '',
-      ]),
-      'package2' => new Package('package2', [
-        'configOrig' => ['system_simple.example2' => 'system_simple.example2'],
-        'dependencies' => [],
-        'bundle' => '',
-      ]),
-      'package3' => new Package('package3', [
-        'configOrig' => ['system_simple.example3' => 'system_simple.example3'],
-        'dependencies' => [],
-        'bundle' => '',
-      ]),
-    ];
-    $this->featuresManager->setPackages($packages);
-
-    $config_item = new ConfigurationItem('system_simple.example', [], ['package' => 'package']);
-    $config_item2 = new ConfigurationItem('system_simple.example2', [], ['package' => 'package2']);
-    $config_item3 = new ConfigurationItem('system_simple.example3', [], ['package' => 'package3']);
-    $this->featuresManager->setConfigCollection(['system_simple.example' => $config_item, 'system_simple.example3' => $config_item3]);
-
-    $result = $this->featuresManager->import(['package', 'package2']);
-    $this->assertEquals([
-      'new' => ['system_simple.example2'],
-      'updated' => ['system_simple.example']
-    ], $result);
-  }
-
 }
 
 class TestFeaturesManager extends FeaturesManager {

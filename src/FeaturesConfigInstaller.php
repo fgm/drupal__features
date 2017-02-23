@@ -93,4 +93,16 @@ class FeaturesConfigInstaller extends ConfigInstaller {
     return $existing_configuration;
   }
 
+  /**
+   * Creates configuration in a collection based on the provided list.
+   *
+   * @param string $collection
+   *   The configuration collection.
+   * @param array $config_to_create
+   *   An array of configuration data to create, keyed by name.
+   */
+  public function createConfiguration($collection, array $config_to_create) {
+    return parent::createConfiguration($collection, $config_to_create);
+  }
+
 }

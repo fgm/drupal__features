@@ -301,14 +301,15 @@ class FeaturesManager implements FeaturesManagerInterface {
    */
   public function loadPackage($module_name, $any = FALSE) {
     $package = $this->getPackage($module_name);
-    if ($any && !isset($package)) {
-      // See if this is a non-features module.
+    // Load directly from module if packages are not loaded or
+    // if we want to include ANY module regardless of its a feature.
+    if ((empty($this->packages) || $any) && !isset($package)) {
       $module_list = $this->moduleHandler->getModuleList();
       if (!empty($module_list[$module_name])) {
         $extension = $module_list[$module_name];
         $package = $this->initPackageFromExtension($extension);
         $config = $this->listExtensionConfig($extension);
-        $package->setConfig($config);
+        $package->setConfigOrig($config);
         $package->setStatus(FeaturesManagerInterface::STATUS_INSTALLED);
       }
     }
@@ -1328,37 +1329,52 @@ class FeaturesManager implements FeaturesManagerInterface {
   /**
    * {@inheritdoc}
    */
-  public function import($modules, $any = FALSE) {
-    $result = [
-      'new' => [],
-      'updated' => []
-    ];
-    $config = $this->getConfigCollection();
+  public function createConfiguration(array $config_to_create) {
+    $existing_config = $this->getConfigCollection();
 
+    // If config data is not specified, load it from the extension storage.
+    foreach ($config_to_create as $name => $item) {
+      if (empty($item)) {
+        $config = $this->configReverter->getFromExtension('', $name);
+        // For testing purposes, if it couldn't load from a module, get config
+        // from the cached Config Collection
+        if (empty($config) && isset($existing_config[$name])) {
+          $config = $existing_config[$name]->getData();
+        }
+        $config_to_create[$name] = $config;
+      }
+    }
+
+    // Determine which config is new vs existing.
+    $existing = array_intersect_key($config_to_create, $existing_config);
+    $new = array_diff_key($config_to_create, $existing);
+
+    // The FeaturesConfigInstaller exposes the normally protected createConfiguration
+    // function from Core ConfigInstaller than handles the creation of new
+    // config or the changing of existing config.
+    /** @var \Drupal\features\FeaturesConfigInstaller $config_installer */
+    $config_installer = \Drupal::service('features.config.installer');
+    $config_installer->createConfiguration(StorageInterface::DEFAULT_COLLECTION, $config_to_create);
+
+    // Collect results for new and updated config.
+    $new_config = $this->getConfigCollection(TRUE);
+    $result['updated'] = array_intersect_key($new_config, $existing);
+    $result['new'] = array_intersect_key($new_config, $new);
+    return $result;
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function import($modules, $any = FALSE) {
+    $result = [];
     foreach ($modules as $module_name) {
       $package = $this->loadPackage($module_name, $any);
       $components = isset($package) ? $package->getConfigOrig() : [];
       if (empty($components)) {
         continue;
       }
-
-      foreach ($components as $component) {
-        if (!isset($config[$component])) {
-          // Import missing component.
-          $item = $this->getConfigType($component);
-          $type = ConfigurationItem::fromConfigStringToConfigType($item['type']);
-          $this->configReverter->import($type, $item['name_short']);
-          $config[$component] = $item;
-          $result['new'][] = $component;
-        }
-        else {
-          // Revert existing component.
-          $item = $config[$component];
-          $type = ConfigurationItem::fromConfigStringToConfigType($item->getType());
-          $this->configReverter->revert($type, $item->getShortName());
-          $result['updated'][] = $component;
-        }
-      }
+      $result[$module_name] = $this->createConfiguration(array_fill_keys($components, []));
     }
     return $result;
   }
