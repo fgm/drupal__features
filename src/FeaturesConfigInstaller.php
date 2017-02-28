@@ -54,14 +54,15 @@ class FeaturesConfigInstaller extends ConfigInstaller {
     $this->configInstaller = $config_installer;
     $this->featuresManager = $features_manager;
 
-    // In order to be compatible with both core 8.2.x and 8.3.x, this
-    // constructor cannot require being passed the install profile from its
-    // service definition because the %install_profile% parameter does not
-    // exist before 8.3, so it has to request it.
-    // @link https://www.drupal.org/node/2851035
-    $install_profile = drupal_get_profile();
-
-    parent::__construct($config_factory, $active_storage, $typed_config, $config_manager, $event_dispatcher, $install_profile);
+    list($major, $minor, ) = explode('.', \Drupal::VERSION);
+    if ($major == 8 && $minor > 2) {
+      // D8.3 added the %install_profile% argument.
+      $install_profile = drupal_get_profile();
+      parent::__construct($config_factory, $active_storage, $typed_config, $config_manager, $event_dispatcher, $install_profile);
+    }
+    else {
+      parent::__construct($config_factory, $active_storage, $typed_config, $config_manager, $event_dispatcher);
+    }
   }
 
   /**
