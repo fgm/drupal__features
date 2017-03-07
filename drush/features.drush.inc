@@ -646,13 +646,12 @@ function drush_features_import() {
       }
       else {
         // Determine which config the user wants to import/revert.
-        $config = $manager->getConfigCollection();
         $config_to_create = [];
         foreach ($components as $component) {
           $dt_args['@component'] = $component;
           $confirmation_message = 'Do you really want to import @module : @component?';
           if ($skip_confirmation || drush_confirm(dt($confirmation_message, $dt_args))) {
-            $config_to_create[$component] = $config[$component]->getData();
+            $config_to_create[$component] = '';
           }
         }
 
