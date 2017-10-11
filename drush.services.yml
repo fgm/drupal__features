@@ -1,0 +1,8 @@
+services:
+  features.commands:
+    class: \Drush\Commands\FeaturesCommands
+    arguments:
+      - '@features_assigner'
+      - '@features.manager'
+    tags:
+      - { name: drush.command }

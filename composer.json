@@ -1,8 +1,13 @@
 {
-  "name": "drupal/features",
-  "description": "Enables administrators to package configuration into modules.",
-  "type": "drupal-module",
+  "autoload": {
+    "psr-4": {
+      "Drush\\": "src"
+    }
+  },
+  "description": "Provides drush commands for Features",
   "license": "GPL-2.0+",
   "minimum-stability": "dev",
-  "require": { }
+  "name": "drupal/features",
+  "require": { },
+  "type": "drupal-module"
 }
