@@ -1,9 +1,17 @@
 <?php
 
-namespace Drush\Commands;
+namespace Drupal\features\Commands;
 
+use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
+use Drupal\Component\Diff\DiffFormatter;
+use Drupal\config_update\ConfigDiffInterface;
+use Drupal\Core\Config\StorageInterface;
 use Drupal\features\FeaturesAssignerInterface;
+use Drupal\features\FeaturesGeneratorInterface;
 use Drupal\features\FeaturesManagerInterface;
+use Drupal\features\Plugin\FeaturesGeneration\FeaturesGenerationWrite;
+use Drush\Commands\DrushCommands;
+use Drush\Exceptions\UserAbortException;
 use Drush\Utils\StringUtils;
 
 /**
@@ -16,14 +24,19 @@ class FeaturesCommands extends DrushCommands {
    *
    * @var \Drupal\features\FeaturesAssignerInterface
    */
-  protected $assigner;
+  protected $featuresAssigner;
 
   /**
    * The features.manager service.
    *
    * @var \Drupal\features\FeaturesManagerInterface
    */
-  protected $manager;
+  protected $featuresManager;
+
+  protected $featuresGenerator;
+  protected $configDiff;
+  protected $configStorage;
+
 
   /**
    * FeaturesCommands constructor.
@@ -32,11 +45,18 @@ class FeaturesCommands extends DrushCommands {
    * @param \Drupal\features\FeaturesManagerInterface $manager
    */
   public function __construct(
-    FeaturesAssignerInterface $assigner,
-    FeaturesManagerInterface $manager
+    FeaturesAssignerInterface $featuresAssigner,
+    FeaturesManagerInterface $featuresManager,
+    FeaturesGeneratorInterface $featuresGenerator,
+    ConfigDiffInterface $configDiff,
+    StorageInterface $configStorage
   ) {
-    $this->assigner = $assigner;
-    $this->manager = $manager;
+    parent::__construct();
+    $this->featuresAssigner = $featuresAssigner;
+    $this->featuresManager = $featuresManager;
+    $this->featuresGenerator = $featuresGenerator;
+    $this->configDiff = $configDiff;
+    $this->configStorage = $configStorage;
   }
 
   /**
@@ -71,6 +91,7 @@ class FeaturesCommands extends DrushCommands {
   /**
    * Display current Features settings.
    *
+<<<<<<< HEAD
    * @param string $keys
    *   A possibly empty, comma-separated, list of config information to display.
    *
@@ -119,18 +140,60 @@ class FeaturesCommands extends DrushCommands {
    * Display a list of all existing features and packages available to be generated.  If a package name is provided as an argument, then all of the configuration objects assigned to that package will be listed.
    *
    * @command features:list:packages
-   * @param $Package The package to list. Optional; if specified, lists all configuration objects assigned to that package. If no package is specified, lists all of the features.
+   * @param $package_name The package to list. Optional; if specified, lists all configuration objects assigned to that package. If no package is specified, lists all of the features.
    * @option bundle Use a specific bundle namespace.
    * @usage drush features-list-packages
-   *   Display a list of all existing featurea and packages available to be generated.
+   *   Display a list of all existing features and packages available to be generated.
    * @usage drush features-list-packages 'example_article'
    *   Display a list of all configuration objects assigned to the 'example_article' package.
+   * @field-labels
+   *   name: Name
+   *   machine_name: Machine name
+   *   status: Status
+   *   version: Version
+   *   state: State
    * @aliases fl,features-list-packages
    */
-  public function listPackages($Package, $options = ['bundle' => null])
-  {
-      // See bottom of https://weitzman.github.io/blog/port-to-drush9 for details on what to change when porting a
-      // legacy command.
+  public function listPackages($package_name = NULL, $options = ['format' => 'table', 'bundle' => null]) {
+    $assigner = $this->getAssigner($options);
+    $current_bundle = $assigner->getBundle();
+    $namespace = $current_bundle->isDefault() ? '' : $current_bundle->getMachineName();
+
+    $manager = $this->featuresManager;
+    $packages = $manager->getPackages();
+
+    $packages = $manager->filterPackages($packages, $namespace);
+    $result = array();
+
+    // If no package was specified, list all packages.
+    if (empty($package_name)) {
+      foreach ($packages as $package) {
+        $overrides = $manager->detectOverrides($package);
+        $state = $package->getState();
+        if (!empty($overrides) && ($package->getStatus() != FeaturesManagerInterface::STATUS_NO_EXPORT)) {
+          $state = FeaturesManagerInterface::STATE_OVERRIDDEN;
+        }
+
+        $result[$package->getMachineName()] = array(
+          'name' => $package->getName(),
+          'machine_name' => $package->getMachineName(),
+          'status' => $manager->statusLabel($package->getStatus()),
+          'version' => $package->getVersion(),
+          'state' => ($state != FeaturesManagerInterface::STATE_DEFAULT)
+            ? $manager->stateLabel($state)
+            : '',
+        );
+      }
+      return new RowsOfFields($result);
+    }
+    // If a valid package was listed, list its configuration.
+    else {
+      // @todo. I suggest changing this command to return YAML with config as nested values.
+    }
+
+    // If no matching package found, return an error.
+    $this->logger()->warning(dt('Package "@package" not found.', array('@package' => $package_name)));
+    return FALSE;
   }
 
   /**
@@ -142,17 +205,37 @@ class FeaturesCommands extends DrushCommands {
    *   Import module config from all installed features.
    * @aliases fra,fia,fim-all,features-import-all
    */
-  public function importAll($options = ['bundle' => null])
-  {
-      // See bottom of https://weitzman.github.io/blog/port-to-drush9 for details on what to change when porting a
-      // legacy command.
+  public function importAll($options = ['bundle' => null]) {
+    $assigner = $this->getAssigner($options);
+    $current_bundle = $assigner->getBundle();
+    $namespace = $current_bundle->isDefault() ? '' : $current_bundle->getMachineName();
+
+    $manager = $this->featuresManager;
+    $packages = $manager->getPackages();
+    $packages = $manager->filterPackages($packages, $namespace);
+    $overridden = array();
+
+    foreach ($packages as $package) {
+      $overrides = $manager->detectOverrides($package);
+      $missing = $manager->detectMissing($package);
+      if ((!empty($missing) || !empty($overrides)) && ($package->getStatus() == FeaturesManagerInterface::STATUS_INSTALLED)) {
+        $overridden[] = $package->getMachineName();
+      }
+    }
+
+    if (!empty($overridden)) {
+      $this->import($overridden);
+    }
+    else {
+      $this->logger->info(dt('Current state already matches active config, aborting.'));
+    }
   }
 
   /**
    * Export the configuration on your site into a custom module.
    *
    * @command features:export
-   * @param $Package A space delimited list of features to export.
+   * @param $packages A space delimited list of features to export.
    * @option add-profile Package features into an install profile.
    * @option bundle Use a specific bundle namespace.
    * @usage drush features-export
@@ -163,75 +246,619 @@ class FeaturesCommands extends DrushCommands {
    *   Export all available packages and add them to an install profile.
    * @aliases fex,fu,fua,fu-all,features-export
    */
-  public function export($Package, $options = ['add-profile' => null, 'bundle' => null])
-  {
-      // See bottom of https://weitzman.github.io/blog/port-to-drush9 for details on what to change when porting a
-      // legacy command.
+  public function export(array $packages, $options = ['add-profile' => null, 'bundle' => null]) {
+    $assigner = $this->getAssigner($options);
+    $manager = $this->featuresManager;
+    $generator = $this->featuresGenerator;
+
+    $current_bundle = $assigner->getBundle();
+
+    if ($options['add-profile']) {
+      if ($current_bundle->isDefault) {
+        throw new \Exception((dt("Must specify a profile name with --name")));
+      }
+      $current_bundle->setIsProfile(TRUE);
+    }
+
+    $all_packages = $manager->getPackages();
+    foreach ($packages as $name) {
+      if (!isset($all_packages[$name])) {
+        throw new \Exception(dt("The package @name does not exist.", array('@name' => $name)));
+      }
+    }
+
+    if (empty($packages)) {
+      $packages = $all_packages;
+      $dt_args = array('@modules' => implode(', ', array_keys($packages)));
+      drush_print(dt('The following extensions will be exported: @modules', $dt_args));
+      if (!$this->io()->confirm('Do you really want to continue?')) {
+        throw new UserAbortException();
+      }
+    }
+
+    // If any packages exist, confirm before overwriting.
+    if ($existing_packages = $manager->listPackageDirectories($packages, $current_bundle)) {
+      foreach ($existing_packages as $name => $directory) {
+        drush_print(dt("The extension @name already exists at @directory.", array('@name' => $name, '@directory' => $directory)));
+      }
+      // Apparently, format_plural is not always available.
+      if (count($existing_packages) == 1) {
+        $message = dt('Would you like to overwrite it?');
+      }
+      else {
+        $message = dt('Would you like to overwrite them?');
+      }
+      if (!$this->io()->confirm($message)) {
+        throw new UserAbortException();
+      }
+    }
+
+    // Use the write generation method.
+    $method_id = FeaturesGenerationWrite::METHOD_ID;
+    $result = $generator->generatePackages($method_id, $current_bundle, array_keys($packages));
+
+    foreach ($result as $message) {
+      $method = $message['success'] ? 'success' : 'error';
+      $this->logger()->$method(dt($message['message'], $message['variables']));
+    }
   }
 
   /**
    * Add a config item to a feature package.
    *
    * @command features:add
-   * @param $Feature Feature package to export and add config to.
-   * @param $Components Patterns of config to add, see features-components for the format of patterns.
+   * @todo @param $feature Feature package to export and add config to.
+   * @param $components Patterns of config to add, see features-components for the format of patterns.
    * @option bundle Use a specific bundle namespace.
    * @aliases fa,fe,features-add
    */
-  public function add($Feature, $Components, $options = ['bundle' => null])
-  {
-      // See bottom of https://weitzman.github.io/blog/port-to-drush9 for details on what to change when porting a
-      // legacy command.
+  public function add($components = null, $options = ['bundle' => null]) {
+    if ($components) {
+      $assigner = $this->getAssigner($options);
+      $manager = $this->featuresManager;
+      $generator = $this->featuresGenerator;
+
+      $current_bundle = $assigner->getBundle();
+
+      $module = array_shift($args);
+      if (empty($args)) {
+        throw new \Exception('No components supplied.');
+      }
+      $components = $this->componentList();
+      $options = array(
+        'exported' => FALSE,
+      );
+
+      $filtered_components = $this->componentFilter($components, $args, $options);
+      $items = $filtered_components['components'];
+
+      if (empty($items)) {
+        throw new \Exception('No components to add.');
+      }
+
+      $packages = array($module);
+      // If any packages exist, confirm before overwriting.
+      if ($existing_packages = $manager->listPackageDirectories($packages)) {
+        foreach ($existing_packages as $name => $directory) {
+          drush_print(dt("The extension @name already exists at @directory.", array('@name' => $name, '@directory' => $directory)));
+        }
+        // Apparently, format_plural is not always available.
+        if (count($existing_packages) == 1) {
+          $message = dt('Would you like to overwrite it?');
+        }
+        else {
+          $message = dt('Would you like to overwrite them?');
+        }
+        if (!$this->io()->confirm($message)) {
+          throw new UserAbortException();
+        }
+      }
+      else {
+        $package = $manager->initPackage($module, NULL, '', 'module', $current_bundle);
+        list($full_name, $path) = $manager->getExportInfo($package, $current_bundle);
+        drush_print(dt('Will create a new extension @name in @directory', array('@name' => $full_name, '@directory' => $path)));
+        if (!$this->io()->confirm(dt('Do you really want to continue?'))) {
+          throw new UserAbortException();
+        }
+      }
+
+      $config = $this->buildConfig($items);
+
+      $manager->assignConfigPackage($module, $config);
+
+      // Use the write generation method.
+      $method_id = FeaturesGenerationWrite::METHOD_ID;
+      $result = $generator->generatePackages($method_id, $current_bundle, $packages);
+
+      foreach ($result as $message) {
+        $method = $message['success'] ? 'success' : 'error';
+        $this->logger()->$method(dt($message['message'], $message['variables']));
+      }
+    }
+    else {
+      throw new \Exception('No feature name given.');
+    }
   }
 
   /**
    * List features components.
    *
    * @command features:components
-   * @param $Patterns The features components type to list. Omit this argument to list all components.
+   * @param $patterns The features components type to list. Omit this argument to list all components.
    * @option exported Show only components that have been exported.
    * @option not-exported Show only components that have not been exported.
    * @option bundle Use a specific bundle namespace.
    * @aliases fc,features-components
+   * @field-labels
+   *  source: Available sources
+   *
+   * @return RowsOfFields
    */
-  public function components($Patterns, $options = ['exported' => null, 'not-exported' => null, 'bundle' => null])
-  {
-      // See bottom of https://weitzman.github.io/blog/port-to-drush9 for details on what to change when porting a
-      // legacy command.
+  public function components(array $patterns, $options = ['format' => 'table', 'exported' => null, 'not-exported' => null, 'bundle' => null]) {
+    $args = $patterns;
+    $assigner = $this->getAssigner($options);
+
+    $components = $this->componentList();
+    ksort($components);
+    // If no args supplied, prompt with a list.
+    if (empty($args)) {
+      $types = array_keys($components);
+      array_unshift($types, 'all');
+      $choice = $this->io()->choice('Enter a number to choose which component type to list.', $types);
+      if ($choice === FALSE) {
+        return;
+      }
+
+      $args = ($choice == 0) ? array('*') : array($types[$choice]);
+    }
+    $options = array(
+      'provided by' => TRUE,
+    );
+    if ($options['exported']) {
+      $options['not exported'] = FALSE;
+    }
+    elseif ($options['not-exported']) {
+      $options['exported'] = FALSE;
+    }
+
+    $filtered_components = $this->componentFilter($components, $args, $options);
+    if ($filtered_components) {
+      return $this->componentPrint($filtered_components);
+    }
   }
 
   /**
    * Show the difference between the active config and the default config stored in a feature package.
    *
    * @command features:diff
-   * @param $Feature The feature in question.
+   * @param $feature The feature in question.
    * @option ctypes Comma separated list of component types to limit the output to. Defaults to all types.
    * @option lines Generate diffs with <n> lines of context instead of the usual two.
    * @option bundle Use a specific bundle namespace.
    * @aliases fd,features-diff
    */
-  public function diff($Feature, $options = ['ctypes' => null, 'lines' => null, 'bundle' => null])
-  {
-      // See bottom of https://weitzman.github.io/blog/port-to-drush9 for details on what to change when porting a
-      // legacy command.
+  public function diff($feature, $options = ['ctypes' => null, 'lines' => null, 'bundle' => null]) {
+    $manager = $this->featuresManager;
+    $assigner = $this->getAssigner($options);
+    $assigner->assignConfigPackages();
+
+    $module = $feature;
+    $filter_ctypes = $options["ctypes"];
+    if ($filter_ctypes) {
+      $filter_ctypes = explode(',', $filter_ctypes);
+    }
+
+    $feature = $manager->loadPackage($module, TRUE);
+    if (empty($feature)) {
+      throw new \Exception(dt('No such feature is available: @module', array('@module' => $module)));
+    }
+
+    $lines = $options['lines'];
+    $lines = isset($lines) ? $lines : 2;
+
+    $formatter = new DiffFormatter();
+    $formatter->leading_context_lines = $lines;
+    $formatter->trailing_context_lines = $lines;
+    $formatter->show_header = FALSE;
+
+    if (drush_get_context('DRUSH_NOCOLOR')) {
+      $red = $green = "%s";
+    }
+    else {
+      $red = "\033[31;40m\033[1m%s\033[0m";
+      $green = "\033[0;32;40m\033[1m%s\033[0m";
+    }
+
+    $overrides = $manager->detectOverrides($feature);
+    $missing = $manager->reorderMissing($manager->detectMissing($feature));
+    $overrides = array_merge($overrides, $missing);
+
+    if (empty($overrides)) {
+      drush_print(dt('Active config matches stored config for @module.', array('@module' => $module)));
+    }
+    else {
+      $config_diff = $this->configDiff;
+      $active_storage = $this->configStorage;
+
+      // Print key for colors.
+      drush_print(dt('Legend: '));
+      drush_print(sprintf($red, dt('Code:    drush features-import will replace the active config with the displayed code.')));
+      drush_print(sprintf($green, dt('Active:  drush features-export will update the exported feature with the displayed active config')));
+
+      foreach ($overrides as $name) {
+        $message = '';
+        if (in_array($name, $missing)) {
+          $message = sprintf($red, t('(missing from active)'));
+          $extension = array();
+        } else {
+          $active = $manager->getActiveStorage()->read($name);
+          $extension = $manager->getExtensionStorages()->read($name);
+          if (empty($extension)) {
+            $extension = array();
+            $message = sprintf($green, t('(not exported)'));
+          }
+          $diff = $config_diff->diff($extension, $active);
+          $rows = explode("\n", $formatter->format($diff));
+        }
+        drush_print();
+        drush_print(dt("Config @name @message", array('@name' => $name, '@message' => $message)));
+        if (!empty($extension)) {
+          foreach ($rows as $row) {
+            if (strpos($row, '>') === 0) {
+              drush_print(sprintf($green, $row));
+            } elseif (strpos($row, '<') === 0) {
+              drush_print(sprintf($red, $row));
+            } else {
+              drush_print($row);
+            }
+          }
+        }
+      }
+    }
   }
 
   /**
    * Import a module config into your site.
    *
    * @command features:import
-   * @param $Feature A space delimited list of features or feature:component pairs to import.
+   * @param $feature A space delimited list of features or feature:component pairs to import.
    * @option force Force import even if config is not overridden.
    * @option bundle Use a specific bundle namespace.
    * @usage drush features-import foo:node.type.page foo:taxonomy.vocabulary.tags bar
    *   Import node and taxonomy config of feature "foo". Import all config of feature "bar".
    * @aliases fim,fr,features-import
    */
-  public function import($Feature, $options = ['force' => null, 'bundle' => null])
-  {
-      // See bottom of https://weitzman.github.io/blog/port-to-drush9 for details on what to change when porting a
-      // legacy command.
+  public function import(array $feature, $options = ['force' => null, 'bundle' => null]) {
+    if ($feature) {
+      // Determine if revert should be forced.
+      $force = $options['force'];
+      // Determine if -y was supplied. If so, we can filter out needless output
+      // from this command.
+      $skip_confirmation = drush_get_context('DRUSH_AFFIRMATIVE');
+      $manager = $this->featuresManager;
+
+      // Parse list of arguments.
+      $modules = array();
+      foreach ($feature as $arg) {
+        $arg = explode(':', $arg);
+        $module = array_shift($arg);
+        $component = array_shift($arg);
+
+        if (isset($module)) {
+          if (empty($component)) {
+            // If we received just a feature name, this means that we need all of
+            // its components.
+            $modules[$module] = TRUE;
+          } elseif ($modules[$module] !== TRUE) {
+            if (!isset($modules[$module])) {
+              $modules[$module] = array();
+            }
+            $modules[$module][] = $component;
+          }
+        }
+      }
+
+      // Process modules.
+      foreach ($modules as $module => $components_needed) {
+
+        $dt_args['@module'] = $module;
+        /** @var \Drupal\features\Package $feature */
+        $feature = $manager->loadPackage($module, TRUE);
+        if (empty($feature)) {
+          throw new \Exception(dt('No such feature is available: @module', $dt_args));
+        }
+
+        if ($feature->getStatus() != FeaturesManagerInterface::STATUS_INSTALLED) {
+          throw new \Exception(dt('No such feature is installed: @module', $dt_args));
+        }
+
+        // Forcefully revert all components of a feature.
+        if ($force) {
+          $components = $feature->getConfigOrig();
+        } // Only revert components that are detected to be Overridden.
+        else {
+          $components = $manager->detectOverrides($feature);
+          $missing = $manager->reorderMissing($manager->detectMissing($feature));
+          // Be sure to import missing components first.
+          $components = array_merge($missing, $components);
+        }
+
+        if (!empty($components_needed) && is_array($components_needed)) {
+          $components = array_intersect($components, $components_needed);
+        }
+
+        if (empty($components)) {
+          $this->logger()->info(dt('Current state already matches active config, aborting.'));
+        } else {
+          // Determine which config the user wants to import/revert.
+          $config_to_create = [];
+          foreach ($components as $component) {
+            $dt_args['@component'] = $component;
+            $confirmation_message = 'Do you really want to import @module : @component?';
+            if ($skip_confirmation || $this->io()->confirm(dt($confirmation_message, $dt_args))) {
+              $config_to_create[$component] = '';
+            }
+          }
+
+          // Perform the import/revert.
+          $config_imported = $manager->createConfiguration($config_to_create);
+
+          // List the results.
+          foreach ($components as $component) {
+            $dt_args['@component'] = $component;
+            if (isset($config_imported['new'][$component])) {
+              $this->logger()->info(dt('Imported @module : @component.', $dt_args));
+            } elseif (isset($config_imported['updated'][$component])) {
+              $this->logger()->info(dt('Reverted @module : @component.', $dt_args));
+            } elseif (!isset($config_to_create[$component])) {
+              $this->logger()->info(dt('Skipping @module : @component.', $dt_args));
+            } else {
+              $this->logger()->error(dt('Error importing @module : @component.', $dt_args));
+            }
+          }
+        }
+      }
+    }
+    else {
+      drush_invoke_process('@self', 'features-list-packages', [], $options);
+    }
   }
 
+  public function getAssigner($options) {
+    $assigner = $this->featuresAssigner;
+    $bundle_name = $options['bundle'];
+    if (!empty($bundle_name)) {
+      $bundle = $assigner->applyBundle($bundle_name);
+      if ($bundle->getMachineName() != $bundle_name) {
+        $this->logger()->warning(dt('Bundle @name not found. Using default.', array('@name' => $bundle_name)));
+      }
+    }
+    else {
+      $assigner->assignConfigPackages();
+    }
+    return $assigner;
+  }
+
+  /**
+   * Returns an array of full config names given a array[$type][$component].
+   *
+   * @param array $items
+   *   The items to return data for.
+   */
+  function buildConfig(array $items) {
+    $result = array();
+    foreach ($items as $config_type => $item) {
+      foreach ($item as $item_name => $title) {
+        $result[] = $this->featuresManager->getFullName($config_type, $item_name);
+      }
+    }
+    return $result;
+  }
+
+  /**
+   * Returns a listing of all known components, indexed by source.
+   */
+  function componentList() {
+    $result = array();
+    $config = $this->featuresManager->getConfigCollection();
+    foreach ($config as $item_name => $item) {
+      $result[$item->getType()][$item->getShortName()] = $item->getLabel();
+    }
+    return $result;
+  }
+
+  /**
+   * Filters components by patterns.
+   */
+  function componentFilter($all_components, $patterns = array(), $options = array()) {
+    $options += array(
+      'exported' => TRUE,
+      'not exported' => TRUE,
+      'provided by' => FALSE,
+    );
+    $pool = array();
+    // Maps exported components to feature modules.
+    $components_map = $this->componentMap();
+    // First filter on exported state.
+    foreach ($all_components as $source => $components) {
+      foreach ($components as $name => $title) {
+        $exported = count($components_map[$source][$name]) > 0;
+        if ($exported) {
+          if ($options['exported']) {
+            $pool[$source][$name] = $title;
+          }
+        }
+        else {
+          if ($options['not exported']) {
+            $pool[$source][$name] = $title;
+          }
+        }
+      }
+    }
+
+    $state_string = '';
+
+    if (!$options['exported']) {
+      $state_string = 'unexported';
+    }
+    elseif (!$options['not exported']) {
+      $state_string = 'exported';
+    }
+
+    $selected = array();
+    foreach ($patterns as $pattern) {
+      // Rewrite * to %. Let users use both as wildcard.
+      $pattern = strtr($pattern, array('*' => '%'));
+      $sources = array();
+      list($source_pattern, $component_pattern) = explode(':', $pattern, 2);
+      // If source is empty, use a pattern.
+      if ($source_pattern == '') {
+        $source_pattern = '%';
+      }
+      if ($component_pattern == '') {
+        $component_pattern = '%';
+      }
+
+      $preg_source_pattern = strtr(preg_quote($source_pattern, '/'), array('%' => '.*'));
+      $preg_component_pattern = strtr(preg_quote($component_pattern, '/'), array('%' => '.*'));
+      // If it isn't a pattern, but a simple string, we don't anchor the
+      // pattern. This allows for abbreviating. Otherwise, we do, as this seems
+      // more natural for patterns.
+      if (strpos($source_pattern, '%') !== FALSE) {
+        $preg_source_pattern = '^' . $preg_source_pattern . '$';
+      }
+      if (strpos($component_pattern, '%') !== FALSE) {
+        $preg_component_pattern = '^' . $preg_component_pattern . '$';
+      }
+      $matches = array();
+
+      // Find the sources.
+      $all_sources = array_keys($pool);
+      $matches = preg_grep('/' . $preg_source_pattern . '/', $all_sources);
+      if (count($matches) > 0) {
+        // If we have multiple matches and the source string wasn't a
+        // pattern, check if one of the matches is equal to the pattern, and
+        // use that, or error out.
+        if (count($matches) > 1 and $preg_source_pattern[0] != '^') {
+          if (in_array($source_pattern, $matches)) {
+            $matches = array($source_pattern);
+          }
+          else {
+            throw new \Exception(dt('Ambiguous source "@source", matches @matches', array(
+              '@source' => $source_pattern,
+              '@matches' => implode(', ', $matches),
+            )));
+          }
+        }
+        // Loose the indexes preg_grep preserved.
+        $sources = array_values($matches);
+      }
+      else {
+        throw new \Exception(dt('No @state sources match "@source"', array('@state' => $state_string, '@source' => $source_pattern)));
+      }
+
+      // Now find the components.
+      foreach ($sources as $source) {
+        // Find the components.
+        $all_components = array_keys($pool[$source]);
+        // See if there's any matches.
+        $matches = preg_grep('/' . $preg_component_pattern . '/', $all_components);
+        if (count($matches) > 0) {
+          // If we have multiple matches and the components string wasn't a
+          // pattern, check if one of the matches is equal to the pattern, and
+          // use that, or error out.
+          if (count($matches) > 1 and $preg_component_pattern[0] != '^') {
+            if (in_array($component_pattern, $matches)) {
+              $matches = array($component_pattern);
+            }
+            else {
+              throw new \Exception(dt('Ambiguous component "@component", matches @matches', array(
+                '@component' => $component_pattern,
+                '@matches' => implode(', ', $matches),
+              )));
+            }
+          }
+          if (!is_array($selected[$source])) {
+            $selected[$source] = array();
+          }
+          $selected[$source] += array_intersect_key($pool[$source], array_flip($matches));
+        }
+        else {
+          // No matches. If the source was a pattern, just carry on, else
+          // error out. Allows for patterns like :*field*
+          if ($preg_source_pattern[0] != '^') {
+            throw new \Exception(dt('No @state @source components match "@component"', array(
+              '@state' => $state_string,
+              '@component' => $component_pattern,
+              '@source' => $source,
+            )));
+          }
+        }
+      }
+    }
+
+    // Lastly, provide feature module information on the selected components, if
+    // requested.
+    $provided_by = array();
+    if ($options['provided by'] && $options['exported']) {
+      foreach ($selected as $source => $components) {
+        foreach ($components as $name => $title) {
+          $exported = count($components_map[$source][$name]) > 0;
+          if ($exported) {
+            $provided_by[$source . ':' . $name] = implode(', ', $components_map[$source][$name]);
+          }
+        }
+      }
+    }
+
+    return array(
+      'components' => $selected,
+      'sources' => $provided_by,
+    );
+  }
+
+  /**
+   * Provides a component to feature map (port of features_get_component_map).
+   */
+  function componentMap() {
+    $result = array();
+    $manager = $this->featuresManager;
+    // Recalc full config list without running assignments.
+    $config = $manager->getConfigCollection();
+    $packages = $manager->getPackages();
+
+    foreach ($config as $item_name => $item) {
+      $type = $item->getType();
+      $short_name = $item->getShortName();
+      $name = $item->getName();
+      if (!isset($result[$type][$short_name])) {
+        $result[$type][$short_name] = array();
+      }
+      if (!empty($item->getPackage())) {
+        $package = $packages[$item->getPackage()];
+        $result[$type][$short_name][] = $package->getMachineName();
+      }
+    }
+
+    return $result;
+  }
+
+  /**
+   * Prints a list of filtered components.
+   */
+  function componentPrint($filtered_components) {
+    $rows = [];
+    foreach ($filtered_components['components'] as $source => $components) {
+      foreach ($components as $name => $value) {
+        $row = array('source' => $source . ':' . $name);
+        if (isset($filtered_components['sources'][$source . ':' . $name])) {
+          $row['source'] = dt('Provided by') . ': ' . $filtered_components['sources'][$source . ':' . $name];
+        }
+        $rows[] = $row;
+      }
+    }
+
+    return new RowsOfFields($rows);
+  }
 
 }

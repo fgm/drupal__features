@@ -1,9 +1,4 @@
 {
-  "autoload": {
-    "psr-4": {
-      "Drush\\": "src"
-    }
-  },
   "description": "Provides drush commands for Features",
   "license": "GPL-2.0+",
   "minimum-stability": "dev",
