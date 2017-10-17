@@ -24,43 +24,62 @@ class FeaturesCommands extends DrushCommands {
    *
    * @var \Drupal\features\FeaturesAssignerInterface
    */
-  protected $featuresAssigner;
+  protected $assigner;
 
   /**
    * The features.manager service.
    *
    * @var \Drupal\features\FeaturesManagerInterface
    */
-  protected $featuresManager;
+  protected $manager;
 
-  protected $featuresGenerator;
+  /**
+   * The features_generator service.
+   *
+   * @var \Drupal\features\FeaturesGeneratorInterface
+   */
+  protected $generator;
+
+  /**
+   * The config_update.config_diff service.
+   *
+   * @var \Drupal\config_update\ConfigDiffInterface
+   */
   protected $configDiff;
-  protected $configStorage;
 
+  /**
+   * The config.storage service.
+   *
+   * @var \Drupal\Core\Config\StorageInterface
+   */
+  protected $configStorage;
 
   /**
    * FeaturesCommands constructor.
    *
    * @param \Drupal\features\FeaturesAssignerInterface $assigner
    * @param \Drupal\features\FeaturesManagerInterface $manager
+   * @param \Drupal\features\FeaturesGeneratorInterface $generator
+   * @param \Drupal\config_update\ConfigDiffInterface $configDiff
+   * @param \Drupal\Core\Config\StorageInterface $configStorage
    */
   public function __construct(
-    FeaturesAssignerInterface $featuresAssigner,
-    FeaturesManagerInterface $featuresManager,
-    FeaturesGeneratorInterface $featuresGenerator,
+    FeaturesAssignerInterface $assigner,
+    FeaturesManagerInterface $manager,
+    FeaturesGeneratorInterface $generator,
     ConfigDiffInterface $configDiff,
     StorageInterface $configStorage
   ) {
     parent::__construct();
-    $this->featuresAssigner = $featuresAssigner;
-    $this->featuresManager = $featuresManager;
-    $this->featuresGenerator = $featuresGenerator;
+    $this->assigner = $assigner;
     $this->configDiff = $configDiff;
     $this->configStorage = $configStorage;
+    $this->generator = $generator;
+    $this->manager = $manager;
   }
 
   /**
-   * Applies global options for Features drush commands.
+   * Applies global options for Features drush commands, including the bundle.
    *
    * The option --name="bundle_name" sets the bundle namespace.
    *
@@ -91,7 +110,6 @@ class FeaturesCommands extends DrushCommands {
   /**
    * Display current Features settings.
    *
-<<<<<<< HEAD
    * @param string $keys
    *   A possibly empty, comma-separated, list of config information to display.
    *
@@ -127,12 +145,10 @@ class FeaturesCommands extends DrushCommands {
     if (!empty($keys)) {
       $config = $this->manager->getConfigCollection();
       $keys = StringUtils::csvToArray($keys);
-      if (count($keys) > 1) {
-        $this->output()->writeln(print_r(array_keys($config), TRUE));
-      }
-      else {
-        $this->output()->writeln($config[$keys[0]], TRUE);
-      }
+      $data = count($keys) > 1
+        ? array_keys($config)
+        : $config[$keys[0]];
+      $this->output()->writeln(print_r($data, TRUE));
     }
   }
 
@@ -159,7 +175,7 @@ class FeaturesCommands extends DrushCommands {
     $current_bundle = $assigner->getBundle();
     $namespace = $current_bundle->isDefault() ? '' : $current_bundle->getMachineName();
 
-    $manager = $this->featuresManager;
+    $manager = $this->manager;
     $packages = $manager->getPackages();
 
     $packages = $manager->filterPackages($packages, $namespace);
@@ -210,7 +226,7 @@ class FeaturesCommands extends DrushCommands {
     $current_bundle = $assigner->getBundle();
     $namespace = $current_bundle->isDefault() ? '' : $current_bundle->getMachineName();
 
-    $manager = $this->featuresManager;
+    $manager = $this->manager;
     $packages = $manager->getPackages();
     $packages = $manager->filterPackages($packages, $namespace);
     $overridden = array();
@@ -248,8 +264,8 @@ class FeaturesCommands extends DrushCommands {
    */
   public function export(array $packages, $options = ['add-profile' => null, 'bundle' => null]) {
     $assigner = $this->getAssigner($options);
-    $manager = $this->featuresManager;
-    $generator = $this->featuresGenerator;
+    $manager = $this->manager;
+    $generator = $this->generator;
 
     $current_bundle = $assigner->getBundle();
 
@@ -315,8 +331,8 @@ class FeaturesCommands extends DrushCommands {
   public function add($components = null, $options = ['bundle' => null]) {
     if ($components) {
       $assigner = $this->getAssigner($options);
-      $manager = $this->featuresManager;
-      $generator = $this->featuresGenerator;
+      $manager = $this->manager;
+      $generator = $this->generator;
 
       $current_bundle = $assigner->getBundle();
 
@@ -438,7 +454,7 @@ class FeaturesCommands extends DrushCommands {
    * @aliases fd,features-diff
    */
   public function diff($feature, $options = ['ctypes' => null, 'lines' => null, 'bundle' => null]) {
-    $manager = $this->featuresManager;
+    $manager = $this->manager;
     $assigner = $this->getAssigner($options);
     $assigner->assignConfigPackages();
 
@@ -535,7 +551,7 @@ class FeaturesCommands extends DrushCommands {
       // Determine if -y was supplied. If so, we can filter out needless output
       // from this command.
       $skip_confirmation = drush_get_context('DRUSH_AFFIRMATIVE');
-      $manager = $this->featuresManager;
+      $manager = $this->manager;
 
       // Parse list of arguments.
       $modules = array();
@@ -625,7 +641,7 @@ class FeaturesCommands extends DrushCommands {
   }
 
   public function getAssigner($options) {
-    $assigner = $this->featuresAssigner;
+    $assigner = $this->assigner;
     $bundle_name = $options['bundle'];
     if (!empty($bundle_name)) {
       $bundle = $assigner->applyBundle($bundle_name);
@@ -649,7 +665,7 @@ class FeaturesCommands extends DrushCommands {
     $result = array();
     foreach ($items as $config_type => $item) {
       foreach ($item as $item_name => $title) {
-        $result[] = $this->featuresManager->getFullName($config_type, $item_name);
+        $result[] = $this->manager->getFullName($config_type, $item_name);
       }
     }
     return $result;
@@ -660,7 +676,7 @@ class FeaturesCommands extends DrushCommands {
    */
   function componentList() {
     $result = array();
-    $config = $this->featuresManager->getConfigCollection();
+    $config = $this->manager->getConfigCollection();
     foreach ($config as $item_name => $item) {
       $result[$item->getType()][$item->getShortName()] = $item->getLabel();
     }
@@ -822,7 +838,7 @@ class FeaturesCommands extends DrushCommands {
    */
   function componentMap() {
     $result = array();
-    $manager = $this->featuresManager;
+    $manager = $this->manager;
     // Recalc full config list without running assignments.
     $config = $manager->getConfigCollection();
     $packages = $manager->getPackages();
