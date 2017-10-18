@@ -7,6 +7,7 @@ use Drupal\Component\Diff\DiffFormatter;
 use Drupal\config_update\ConfigDiffInterface;
 use Drupal\Core\Config\StorageInterface;
 use Drupal\features\Exception\DomainException;
+use Drupal\features\Exception\InvalidArgumentException;
 use Drupal\features\FeaturesAssignerInterface;
 use Drupal\features\FeaturesGeneratorInterface;
 use Drupal\features\FeaturesManagerInterface;
@@ -313,6 +314,8 @@ class FeaturesCommands extends DrushCommands {
    *
    * @aliases fex,fu,fua,fu-all,features-export
    *
+   * @throws \Drupal\features\Exception\DomainException
+   * @throws \Drupal\features\Exception\InvalidArgumentException
    * @throws \Drush\Exceptions\UserAbortException
    * @throws \Exception
    */
@@ -328,7 +331,7 @@ class FeaturesCommands extends DrushCommands {
 
     if ($options['add-profile']) {
       if ($current_bundle->isDefault) {
-        throw new \Exception((dt("Must specify a profile name with --name")));
+        throw new InvalidArgumentException(dt("Must specify a profile name with --name"));
       }
       $current_bundle->setIsProfile(TRUE);
     }
@@ -336,8 +339,9 @@ class FeaturesCommands extends DrushCommands {
     $all_packages = $manager->getPackages();
     foreach ($packages as $name) {
       if (!isset($all_packages[$name])) {
-        throw new \Exception(dt("The package @name does not exist.",
-          ['@name' => $name]));
+        throw new DomainException(dt("The package @name does not exist.", [
+          '@name' => $name,
+        ]));
       }
     }
 
@@ -349,6 +353,9 @@ class FeaturesCommands extends DrushCommands {
       if (!$this->io()->confirm('Do you really want to continue?')) {
         throw new UserAbortException();
       }
+    }
+    else {
+      $packages = array_combine($packages, $packages);
     }
 
     // If any packages exist, confirm before overwriting.
@@ -372,8 +379,7 @@ class FeaturesCommands extends DrushCommands {
 
     // Use the write generation method.
     $method_id = FeaturesGenerationWrite::METHOD_ID;
-    $result = $generator->generatePackages($method_id, $current_bundle,
-      array_keys($packages));
+    $result = $generator->generatePackages($method_id, $current_bundle, array_keys($packages));
 
     foreach ($result as $message) {
       $method = $message['success'] ? 'success' : 'error';
