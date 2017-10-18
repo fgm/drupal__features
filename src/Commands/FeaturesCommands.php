@@ -59,10 +59,15 @@ class FeaturesCommands extends DrushCommands {
    * FeaturesCommands constructor.
    *
    * @param \Drupal\features\FeaturesAssignerInterface $assigner
+   *   The features_assigner service.
    * @param \Drupal\features\FeaturesManagerInterface $manager
+   *   The features.manager service.
    * @param \Drupal\features\FeaturesGeneratorInterface $generator
+   *   The features_generator service.
    * @param \Drupal\config_update\ConfigDiffInterface $configDiff
+   *   The config_update.config_diff service.
    * @param \Drupal\Core\Config\StorageInterface $configStorage
+   *   The config.storage service.
    */
   public function __construct(
     FeaturesAssignerInterface $assigner,
@@ -114,6 +119,7 @@ class FeaturesCommands extends DrushCommands {
    *   The default value of the option.
    *
    * @return mixed|null
+   *   The option value, defaulting to NULL.
    */
   protected function getOption(array $options, $name, $default = NULL) {
     return isset($options[$name])
@@ -168,29 +174,37 @@ class FeaturesCommands extends DrushCommands {
   }
 
   /**
-   * Display a list of all existing features and packages available to be
-   * generated.  If a package name is provided as an argument, then all of the
-   * configuration objects assigned to that package will be listed.
+   * Display a list of all generate-able existing features and packages.
+   *
+   * If a package name is provided as an argument, then all of the configuration
+   * objects assigned to that package will be listed.
+   *
+   * @param string $package_name
+   *   The package to list. Optional; if specified, lists all configuration
+   *   objects assigned to that package. If no package is specified, lists all
+   *   of the features.
+   *
+   * @return \Consolidation\OutputFormatters\StructuredData\RowsOfFields|bool
+   *   The command output, or FALSE if a requested package was not found.
    *
    * @command features:list:packages
    *
-   * @param $package_name The package to list. Optional; if specified, lists
-   *   all configuration objects assigned to that package. If no package is
-   *   specified, lists all of the features.
-   *
    * @option bundle Use a specific bundle namespace.
-   * @usage drush features-list-packages
+   *
+   * @usage drush features-list -packages
    *   Display a list of all existing features and packages available to be
    *   generated.
    * @usage drush features-list-packages 'example_article'
    *   Display a list of all configuration objects assigned to the
    *   'example_article' package.
+   *
    * @field-labels
    *   name: Name
    *   machine_name: Machine name
    *   status: Status
    *   version: Version
    *   state: State
+   *
    * @aliases fl,features-list-packages
    */
   public function listPackages(
@@ -216,14 +230,16 @@ class FeaturesCommands extends DrushCommands {
           $state = FeaturesManagerInterface::STATE_OVERRIDDEN;
         }
 
+        $packageState = ($state != FeaturesManagerInterface::STATE_DEFAULT)
+          ? $manager->stateLabel($state)
+          : '';
+
         $result[$package->getMachineName()] = [
           'name' => $package->getName(),
           'machine_name' => $package->getMachineName(),
           'status' => $manager->statusLabel($package->getStatus()),
           'version' => $package->getVersion(),
-          'state' => ($state != FeaturesManagerInterface::STATE_DEFAULT)
-            ? $manager->stateLabel($state)
-            : '',
+          'state' => $packageState,
         ];
       }
       return new RowsOfFields($result);
@@ -280,19 +296,25 @@ class FeaturesCommands extends DrushCommands {
   /**
    * Export the configuration on your site into a custom module.
    *
-   * @command features:export
+   * @param array $packages
+   *   A list of features to export.
    *
-   * @param $packages A space delimited list of features to export.
+   * @command features:export
    *
    * @option add-profile Package features into an install profile.
    * @option bundle Use a specific bundle namespace.
+   *
    * @usage drush features-export
    *   Export all available packages.
    * @usage drush features-export example_article example_page
    *   Export the example_article and example_page packages.
    * @usage drush features-export --add-profile
    *   Export all available packages and add them to an install profile.
+   *
    * @aliases fex,fu,fua,fu-all,features-export
+   *
+   * @throws \Drush\Exceptions\UserAbortException
+   * @throws \Exception
    */
   public function export(
     array $packages,
@@ -362,14 +384,18 @@ class FeaturesCommands extends DrushCommands {
   /**
    * Add a config item to a feature package.
    *
+   * @param array|null $components
+   *   Patterns of config to add, see features:components for the format to use.
+   *
    * @command features:add
    * @todo @param $feature Feature package to export and add config to.
    *
-   * @param $components Patterns of config to add, see features-components for
-   *   the format of patterns.
-   *
    * @option bundle Use a specific bundle namespace.
+   *
    * @aliases fa,fe,features-add
+   *
+   * @throws \Drush\Exceptions\UserAbortException
+   * @throws \Exception
    */
   public function add($components = NULL, $options = ['bundle' => NULL]) {
     if ($components) {
@@ -449,19 +475,22 @@ class FeaturesCommands extends DrushCommands {
   /**
    * List features components.
    *
-   * @command features:components
+   * @param array $patterns
+   *   The components types to list. Omit this argument to list them all.
    *
-   * @param $patterns The features components type to list. Omit this argument
-   *   to list all components.
+   * @command features:components
    *
    * @option exported Show only components that have been exported.
    * @option not-exported Show only components that have not been exported.
    * @option bundle Use a specific bundle namespace.
+   *
    * @aliases fc,features-components
+   *
    * @field-labels
    *  source: Available sources
    *
-   * @return RowsOfFields
+   * @return \Consolidation\OutputFormatters\StructuredData\RowsOfFields|null
+   *   The command output. May be empty.
    */
   public function components(
     array $patterns,
@@ -473,7 +502,7 @@ class FeaturesCommands extends DrushCommands {
     ]
   ) {
     $args = $patterns;
-    $assigner = $this->featuresOptions($options);
+    $this->featuresOptions($options);
 
     $components = $this->componentList();
     ksort($components);
@@ -482,10 +511,9 @@ class FeaturesCommands extends DrushCommands {
       $types = array_keys($components);
       array_unshift($types, 'all');
       $choice = $this->io()
-        ->choice('Enter a number to choose which component type to list.',
-          $types);
+        ->choice('Enter a number to choose which component type to list.', $types);
       if ($choice === FALSE) {
-        return;
+        return NULL;
       }
 
       $args = ($choice == 0) ? ['*'] : [$types[$choice]];
@@ -507,19 +535,22 @@ class FeaturesCommands extends DrushCommands {
   }
 
   /**
-   * Show the difference between the active config and the default config
-   * stored in a feature package.
+   * Show the difference between active|default config from a feature package.
+   *
+   * @param string $feature
+   *   The feature in question.
    *
    * @command features:diff
-   *
-   * @param $feature The feature in question.
    *
    * @option ctypes Comma separated list of component types to limit the output
    *   to. Defaults to all types.
    * @option lines Generate diffs with <n> lines of context instead of the
    *   usual two.
    * @option bundle Use a specific bundle namespace.
+   *
    * @aliases fd,features-diff
+   *
+   * @throws \Exception
    */
   public function diff(
     $feature,
@@ -567,7 +598,6 @@ class FeaturesCommands extends DrushCommands {
     }
     else {
       $config_diff = $this->configDiff;
-      $active_storage = $this->configStorage;
 
       // Print key for colors.
       drush_print(dt('Legend: '));
@@ -579,7 +609,7 @@ class FeaturesCommands extends DrushCommands {
       foreach ($overrides as $name) {
         $message = '';
         if (in_array($name, $missing)) {
-          $message = sprintf($red, t('(missing from active)'));
+          $message = sprintf($red, dt('(missing from active)'));
           $extension = [];
         }
         else {
@@ -587,7 +617,7 @@ class FeaturesCommands extends DrushCommands {
           $extension = $manager->getExtensionStorages()->read($name);
           if (empty($extension)) {
             $extension = [];
-            $message = sprintf($green, t('(not exported)'));
+            $message = sprintf($green, dt('(not exported)'));
           }
           $diff = $config_diff->diff($extension, $active);
           $rows = explode("\n", $formatter->format($diff));
@@ -615,7 +645,7 @@ class FeaturesCommands extends DrushCommands {
   /**
    * Import a module config into your site.
    *
-   * @param $feature
+   * @param string $feature
    *   A comma-delimited list of features or feature:component pairs to import.
    *
    * @command features:import
@@ -754,7 +784,7 @@ class FeaturesCommands extends DrushCommands {
    * @param array $items
    *   The items to return data for.
    */
-  function buildConfig(array $items) {
+  protected function buildConfig(array $items) {
     $result = [];
     foreach ($items as $config_type => $item) {
       foreach ($item as $item_name => $title) {
@@ -767,10 +797,10 @@ class FeaturesCommands extends DrushCommands {
   /**
    * Returns a listing of all known components, indexed by source.
    */
-  function componentList() {
+  protected function componentList() {
     $result = [];
     $config = $this->manager->getConfigCollection();
-    foreach ($config as $item_name => $item) {
+    foreach ($config as $item) {
       $result[$item->getType()][$item->getShortName()] = $item->getLabel();
     }
     return $result;
@@ -779,7 +809,7 @@ class FeaturesCommands extends DrushCommands {
   /**
    * Filters components by patterns.
    */
-  function componentFilter($all_components, $patterns = [], $options = []) {
+  protected function componentFilter($all_components, $patterns = [], $options = []) {
     $options += [
       'exported' => TRUE,
       'not exported' => TRUE,
@@ -901,7 +931,7 @@ class FeaturesCommands extends DrushCommands {
         }
         else {
           // No matches. If the source was a pattern, just carry on, else
-          // error out. Allows for patterns like :*field*
+          // error out. Allows for patterns like ":*field*".
           if ($preg_source_pattern[0] != '^') {
             throw new \Exception(dt('No @state @source components match "@component"',
               [
@@ -938,17 +968,16 @@ class FeaturesCommands extends DrushCommands {
   /**
    * Provides a component to feature map (port of features_get_component_map).
    */
-  function componentMap() {
+  protected function componentMap() {
     $result = [];
     $manager = $this->manager;
     // Recalc full config list without running assignments.
     $config = $manager->getConfigCollection();
     $packages = $manager->getPackages();
 
-    foreach ($config as $item_name => $item) {
+    foreach ($config as $item) {
       $type = $item->getType();
       $short_name = $item->getShortName();
-      $name = $item->getName();
       if (!isset($result[$type][$short_name])) {
         $result[$type][$short_name] = [];
       }
@@ -964,7 +993,7 @@ class FeaturesCommands extends DrushCommands {
   /**
    * Prints a list of filtered components.
    */
-  function componentPrint($filtered_components) {
+  protected function componentPrint($filtered_components) {
     $rows = [];
     foreach ($filtered_components['components'] as $source => $components) {
       foreach ($components as $name => $value) {
