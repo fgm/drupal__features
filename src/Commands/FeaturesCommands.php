@@ -248,7 +248,7 @@ class FeaturesCommands extends DrushCommands {
    *
    * @usage drush features-import-all
    *   Import module config from all installed features.
-   * 
+   *
    * @aliases fra,fia,fim-all,features-import-all
    */
   public function importAll($options = ['bundle' => NULL]) {
@@ -634,8 +634,8 @@ class FeaturesCommands extends DrushCommands {
   public function import(
     $feature,
     $options = [
-      'force' => FALSE,
-      'bundle' => FALSE,
+      'force' => NULL,
+      'bundle' => NULL,
     ]
   ) {
     $this->featuresOptions($options);
