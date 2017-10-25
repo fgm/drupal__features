@@ -2,6 +2,8 @@
 
 namespace Drupal\features\Commands;
 
+use Consolidation\OutputFormatters\StructuredData\ListDataFromKeys;
+use Consolidation\OutputFormatters\StructuredData\PropertyList;
 use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
 use Drupal\Component\Diff\DiffFormatter;
 use Drupal\config_update\ConfigDiffInterface;
@@ -146,21 +148,22 @@ class FeaturesCommands extends DrushCommands {
     $currentBundle = $this->assigner->getBundle();
     $export_settings = $this->manager->getExportSettings();
     $methods = $this->assigner->getEnabledAssigners();
+    $output = $this->output();
     if ($currentBundle->isDefault()) {
-      $this->output()->writeln(dt('Current bundle: none'));
+      $output->writeln(dt('Current bundle: none'));
     }
     else {
-      $this->output()->writeln(dt('Current bundle: @name (@machine_name)', [
+      $output->writeln(dt('Current bundle: @name (@machine_name)', [
         '@name' => $currentBundle->getName(),
         '@machine_name' => $currentBundle->getMachineName(),
       ]));
     }
-    $this->output()->writeln(dt('Export folder: @folder', [
+    $output->writeln(dt('Export folder: @folder', [
       '@folder' => $export_settings['folder'],
     ]));
-    $this->output()
+    $output
       ->writeln(dt('The following assignment methods are enabled:'));
-    $this->output()->writeln(dt('  @methods', [
+    $output->writeln(dt('  @methods', [
       '@methods' => implode(', ', array_keys($methods)),
     ]));
 
@@ -170,7 +173,7 @@ class FeaturesCommands extends DrushCommands {
       $data = count($keys) > 1
         ? array_keys($config)
         : $config[$keys[0]];
-      $this->output()->writeln(print_r($data, TRUE));
+      $output->writeln(print_r($data, TRUE));
     }
   }
 
@@ -192,14 +195,15 @@ class FeaturesCommands extends DrushCommands {
    *
    * @option bundle Use a specific bundle namespace.
    *
-   * @usage drush features-list -packages
+   * @usage drush features:list:packages
    *   Display a list of all existing features and packages available to be
    *   generated.
-   * @usage drush features-list-packages 'example_article'
+   * @usage drush features:list:packages 'example_article'
    *   Display a list of all configuration objects assigned to the
    *   'example_article' package.
    *
    * @field-labels
+   *   config: Config
    *   name: Name
    *   machine_name: Machine name
    *   status: Status
@@ -245,15 +249,24 @@ class FeaturesCommands extends DrushCommands {
       }
       return new RowsOfFields($result);
     }
-    // If a valid package was listed, list its configuration.
-    else {
-      // @todo. I suggest changing this command to return YAML with config as nested values.
-    }
+
+    // A valid package was listed.
+    $package = $this->manager->findPackage($package_name);
 
     // If no matching package found, return an error.
-    $this->logger()->warning(dt('Package "@package" not found.',
-      ['@package' => $package_name]));
-    return FALSE;
+    if (empty($package)) {
+      $this->logger()->warning(dt('Package "@package" not found.', [
+        '@package' => $package_name,
+      ]));
+      return FALSE;
+    }
+
+    // This is a valid package, list its configuration.
+    $config = array_map(function ($name) {
+      return ['config' => $name];
+    }, $package->getConfig());
+
+    return new RowsOfFields($config);
   }
 
   /**
