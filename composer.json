@@ -3,6 +3,8 @@
   "license": "GPL-2.0+",
   "minimum-stability": "dev",
   "name": "drupal/features",
-  "require": { },
+  "require": {
+      "drupal/config_update": "^1.4"
+  },
   "type": "drupal-module"
 }
