@@ -2,8 +2,6 @@
 
 namespace Drupal\features\Commands;
 
-use Consolidation\OutputFormatters\StructuredData\ListDataFromKeys;
-use Consolidation\OutputFormatters\StructuredData\PropertyList;
 use Consolidation\OutputFormatters\StructuredData\RowsOfFields;
 use Drupal\Component\Diff\DiffFormatter;
 use Drupal\config_update\ConfigDiffInterface;
@@ -22,6 +20,39 @@ use Drush\Utils\StringUtils;
  * Drush commands for Features.
  */
 class FeaturesCommands extends DrushCommands {
+
+  const OPTIONS =[
+    'bundle' => NULL,
+  ];
+
+  const OPTIONS_ADD = self::OPTIONS;
+
+  const OPTIONS_COMPONENTS = self::OPTIONS + [
+    'exported' => NULL,
+    'format' => 'table',
+    'not-exported' => NULL,
+  ];
+
+  const OPTIONS_DIFF = self::OPTIONS + [
+    'ctypes' => NULL,
+    'lines' => NULL,
+  ];
+
+  const OPTIONS_EXPORT = self::OPTIONS + [
+    'add-profile' => NULL,
+  ];
+
+  const OPTIONS_IMPORT = self::OPTIONS + [
+    'force' => NULL,
+  ];
+
+  const OPTIONS_IMPORT_ALL = self::OPTIONS;
+
+  const OPTIONS_LIST = self::OPTIONS + [
+    'format' => 'table',
+  ];
+
+  const OPTIONS_STATUS = self::OPTIONS;
 
   /**
    * The features_assigner service.
@@ -142,7 +173,7 @@ class FeaturesCommands extends DrushCommands {
    *
    * @aliases fs,features-status
    */
-  public function status($keys = NULL, array $options = ['bundle' => NULL]) {
+  public function status($keys = NULL, array $options = self::OPTIONS_STATUS) {
     $this->featuresOptions($options);
 
     $currentBundle = $this->assigner->getBundle();
@@ -212,10 +243,7 @@ class FeaturesCommands extends DrushCommands {
    *
    * @aliases fl,features-list-packages
    */
-  public function listPackages(
-    $package_name = NULL,
-    $options = ['format' => 'table', 'bundle' => NULL]
-  ) {
+  public function listPackages($package_name = NULL, $options = self::OPTIONS_LIST) {
     $assigner = $this->featuresOptions($options);
     $current_bundle = $assigner->getBundle();
     $namespace = $current_bundle->isDefault() ? '' : $current_bundle->getMachineName();
@@ -281,7 +309,7 @@ class FeaturesCommands extends DrushCommands {
    *
    * @aliases fra,fia,fim-all,features-import-all
    */
-  public function importAll($options = ['bundle' => NULL]) {
+  public function importAll($options = self::OPTIONS_IMPORT_ALL) {
     $assigner = $this->featuresOptions($options);
     $currentBundle = $assigner->getBundle();
     $namespace = $currentBundle->isDefault() ? '' : $currentBundle->getMachineName();
@@ -332,10 +360,7 @@ class FeaturesCommands extends DrushCommands {
    * @throws \Drush\Exceptions\UserAbortException
    * @throws \Exception
    */
-  public function export(
-    array $packages,
-    $options = ['add-profile' => NULL, 'bundle' => NULL]
-  ) {
+  public function export(array $packages, $options = self::OPTIONS_EXPORT) {
     $assigner = $this->featuresOptions($options);
     $manager = $this->manager;
     $generator = $this->generator;
@@ -407,6 +432,7 @@ class FeaturesCommands extends DrushCommands {
    *   Patterns of config to add, see features:components for the format to use.
    *
    * @command features:add
+   *
    * @todo @param $feature Feature package to export and add config to.
    *
    * @option bundle Use a specific bundle namespace.
@@ -416,7 +442,7 @@ class FeaturesCommands extends DrushCommands {
    * @throws \Drush\Exceptions\UserAbortException
    * @throws \Exception
    */
-  public function add($components = NULL, $options = ['bundle' => NULL]) {
+  public function add($components = NULL, $options = self::OPTIONS_ADD) {
     if ($components) {
       $assigner = $this->featuresOptions($options);
       $manager = $this->manager;
@@ -511,15 +537,7 @@ class FeaturesCommands extends DrushCommands {
    * @return \Consolidation\OutputFormatters\StructuredData\RowsOfFields|null
    *   The command output. May be empty.
    */
-  public function components(
-    array $patterns,
-    $options = [
-      'format' => 'table',
-      'exported' => NULL,
-      'not-exported' => NULL,
-      'bundle' => NULL,
-    ]
-  ) {
+  public function components(array $patterns, $options = self::OPTIONS_COMPONENTS) {
     $args = $patterns;
     $this->featuresOptions($options);
 
@@ -561,7 +579,7 @@ class FeaturesCommands extends DrushCommands {
    *
    * @command features:diff
    *
-   * @option ctypes Comma separated list of component types to limit the output
+   * @option ctypes Comma-separated list of component types to limit the output
    *   to. Defaults to all types.
    * @option lines Generate diffs with <n> lines of context instead of the
    *   usual two.
@@ -571,24 +589,24 @@ class FeaturesCommands extends DrushCommands {
    *
    * @throws \Exception
    */
-  public function diff(
-    $feature,
-    $options = ['ctypes' => NULL, 'lines' => NULL, 'bundle' => NULL]
-  ) {
+  public function diff($feature, $options = self::OPTIONS_DIFF) {
     $manager = $this->manager;
     $assigner = $this->featuresOptions($options);
     $assigner->assignConfigPackages();
 
     $module = $feature;
-    $filter_ctypes = $options["ctypes"];
+
+    // @FIXME Actually do something with the "ctypes" option.
+    $filter_ctypes = $options['ctypes'];
     if ($filter_ctypes) {
       $filter_ctypes = explode(',', $filter_ctypes);
     }
 
     $feature = $manager->loadPackage($module, TRUE);
     if (empty($feature)) {
-      throw new \Exception(dt('No such feature is available: @module',
-        ['@module' => $module]));
+      throw new DomainException(dt('No such feature is available: @module', [
+        '@module' => $module,
+      ]));
     }
 
     $lines = $options['lines'];
@@ -611,25 +629,28 @@ class FeaturesCommands extends DrushCommands {
     $missing = $manager->reorderMissing($manager->detectMissing($feature));
     $overrides = array_merge($overrides, $missing);
 
+    $output = $this->output();
+
     if (empty($overrides)) {
-      drush_print(dt('Active config matches stored config for @module.',
-        ['@module' => $module]));
+      $output->writeln(dt('Active config matches stored config for @module.', [
+        '@module' => $module,
+      ]));
     }
     else {
       $config_diff = $this->configDiff;
 
       // Print key for colors.
-      drush_print(dt('Legend: '));
-      drush_print(sprintf($red,
-        dt('Code:    drush features-import will replace the active config with the displayed code.')));
-      drush_print(sprintf($green,
-        dt('Active:  drush features-export will update the exported feature with the displayed active config')));
+      $output->writeln(dt('Legend: '));
+      $output->writeln(sprintf($red,
+        dt('Code:   drush features-import will replace the active config with the displayed code.')));
+      $output->writeln(sprintf($green,
+        dt('Active: drush features-export will update the exported feature with the displayed active config')));
 
       foreach ($overrides as $name) {
         $message = '';
         if (in_array($name, $missing)) {
-          $message = sprintf($red, dt('(missing from active)'));
           $extension = [];
+          $message = sprintf($red, dt('(missing from active)'));
         }
         else {
           $active = $manager->getActiveStorage()->read($name);
@@ -641,19 +662,23 @@ class FeaturesCommands extends DrushCommands {
           $diff = $config_diff->diff($extension, $active);
           $rows = explode("\n", $formatter->format($diff));
         }
-        drush_print();
-        drush_print(dt("Config @name @message",
-          ['@name' => $name, '@message' => $message]));
+
+        $output->writeln('');
+        $output->writeln(dt("Config @name @message", [
+          '@name' => $name,
+          '@message' => $message,
+        ]));
+
         if (!empty($extension)) {
           foreach ($rows as $row) {
             if (strpos($row, '>') === 0) {
-              drush_print(sprintf($green, $row));
+              $output->writeln(sprintf($green, $row));
             }
             elseif (strpos($row, '<') === 0) {
-              drush_print(sprintf($red, $row));
+              $output->writeln(sprintf($red, $row));
             }
             else {
-              drush_print($row);
+              $output->writeln($row);
             }
           }
         }
@@ -680,13 +705,7 @@ class FeaturesCommands extends DrushCommands {
    *
    * @throws \Exception
    */
-  public function import(
-    $feature,
-    $options = [
-      'force' => NULL,
-      'bundle' => NULL,
-    ]
-  ) {
+  public function import($feature, $options = self::OPTIONS_IMPORT) {
     $this->featuresOptions($options);
 
     $features = StringUtils::csvToArray($feature);
@@ -802,6 +821,9 @@ class FeaturesCommands extends DrushCommands {
    *
    * @param array $items
    *   The items to return data for.
+   *
+   * @return array
+   *   An array of config items.
    */
   protected function buildConfig(array $items) {
     $result = [];
