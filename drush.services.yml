@@ -7,5 +7,6 @@ services:
       - '@features_generator'
       - '@config_update.config_diff'
       - '@config.storage'
+      - '@logger.channel.default'
     tags:
       - { name: drush.command }
