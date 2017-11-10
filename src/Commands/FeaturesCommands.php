@@ -331,7 +331,7 @@ class FeaturesCommands extends DrushCommands {
       $this->import($overridden);
     }
     else {
-      $this->logger->info(dt('Current state already matches active config, aborting.'));
+      $this->logger()->info(dt('Current state already matches active config, aborting.'));
     }
   }
 
