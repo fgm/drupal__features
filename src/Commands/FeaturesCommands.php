@@ -15,6 +15,7 @@ use Drupal\features\Plugin\FeaturesGeneration\FeaturesGenerationWrite;
 use Drush\Commands\DrushCommands;
 use Drush\Exceptions\UserAbortException;
 use Drush\Utils\StringUtils;
+use Psr\Log\LoggerInterface;
 
 /**
  * Drush commands for Features.
@@ -90,6 +91,13 @@ class FeaturesCommands extends DrushCommands {
   protected $configStorage;
 
   /**
+   * A logger instance.
+   *
+   * @var \Psr\Log\LoggerInterface
+   */
+  protected $logger;
+
+  /**
    * FeaturesCommands constructor.
    *
    * @param \Drupal\features\FeaturesAssignerInterface $assigner
@@ -102,13 +110,16 @@ class FeaturesCommands extends DrushCommands {
    *   The config_update.config_diff service.
    * @param \Drupal\Core\Config\StorageInterface $configStorage
    *   The config.storage service.
+   * @param \Psr\Log\LoggerInterface $logger
+   *   A logger instance.
    */
   public function __construct(
     FeaturesAssignerInterface $assigner,
     FeaturesManagerInterface $manager,
     FeaturesGeneratorInterface $generator,
     ConfigDiffInterface $configDiff,
-    StorageInterface $configStorage
+    StorageInterface $configStorage,
+    LoggerInterface $logger
   ) {
     parent::__construct();
     $this->assigner = $assigner;
@@ -116,6 +127,7 @@ class FeaturesCommands extends DrushCommands {
     $this->configStorage = $configStorage;
     $this->generator = $generator;
     $this->manager = $manager;
+    $this->logger = $logger;
   }
 
   /**
