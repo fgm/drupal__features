@@ -1,5 +1,12 @@
 {
   "description": "Provides drush commands for Features",
+  "extra": {
+    "drush": {
+      "services": {
+	"drush.services.yml": "^9"
+      }
+    }
+  },
   "license": "GPL-2.0+",
   "minimum-stability": "dev",
   "name": "drupal/features",
